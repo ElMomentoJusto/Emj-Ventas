@@ -232,6 +232,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   <div class="tb" onclick="showTab('crm',this)">👥 Clientes</div>
   <div class="tb" onclick="showTab('ranking',this)">🏆 Ranking</div>
   <div class="tb" onclick="showTab('prods',this)">⚙️ Productos</div>
+  <div class="tb" onclick="showTab('config',this)">🔧 Config</div>
   <div class="tb" onclick="showTab('dashboard',this)">📊 Dashboard</div>
 </div>
 
@@ -241,51 +242,72 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <label style="font-size:10px;color:var(--t2);font-weight:600;text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Fecha</label>
     <input type="date" id="ffecha" onchange="cargarDia()" style="flex:1;background:transparent;border:none;color:var(--t);font-family:'DM Sans',sans-serif;font-size:13px;outline:none">
   </div>
-  <div class="sl">Producto</div>
-  <div class="pgrid" id="pgrid"></div>
-  <div class="sep"></div>
-  <div class="sl">Cantidad</div>
-  <div class="cbox"><div class="clbl">Unidades</div><div class="ccc"><div class="cbtn" onclick="chgCant(-.5)">−</div><div class="cn" id="cnum">1</div><div class="cbtn" onclick="chgCant(.5)">+</div></div></div>
-  <div class="sep"></div>
-  <div class="sl">Forma de pago</div>
+
+  <!-- Selector cliente PRIMERO -->
+  <div style="padding:10px 12px 0">
+    <div class="cl-sel">
+      <div class="cl-sel-btn" onclick="toggleClDrop()">
+        <div class="cl-sel-lbl" id="cl-sel-lbl">👤 Seleccionar cliente (opcional)</div>
+        <div style="color:var(--t2);font-size:13px">▾</div>
+      </div>
+      <div class="cl-drop" id="cl-drop">
+        <div class="cl-drop-search"><input type="text" id="cl-search" placeholder="Buscar por nombre o ID..." oninput="renderClDropList(this.value)"></div>
+        <div class="cl-row" onclick="selCliente(null)" style="border-bottom:1px solid var(--bo)">
+          <div style="font-size:16px">➕</div>
+          <div><div style="font-size:13px;font-weight:600">Sin cliente / Anónimo</div></div>
+        </div>
+        <div id="cl-drop-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forma de pago -->
+  <div class="sl" style="padding-top:10px">Forma de pago</div>
   <div class="ggrid" id="ggrid"></div>
   <div class="sep"></div>
-  <div class="sl">Nota (opcional)</div>
-  <div style="padding:0 12px"><input type="text" class="ni" id="fnota" placeholder="ej: mesa 3, para llevar..."></div>
-  <div style="height:10px"></div>
-  <!-- Preview con monto editable -->
-  <div class="prev">
+
+  <!-- Carrito actual -->
+  <div class="hh">
+    <div class="htit">🛒 Carrito</div>
+    <button class="bclr" onclick="limpiarCarrito()">Vaciar</button>
+  </div>
+  <div id="carrito-lista" style="margin:0 12px 8px;background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r12);overflow:hidden;min-height:44px">
+    <div id="carrito-empty" class="empty" style="padding:14px">Agregá productos abajo ↓</div>
+  </div>
+
+  <!-- Preview total carrito -->
+  <div class="prev" style="margin-bottom:8px" id="carrito-prev">
     <div>
-      <div class="pp" id="pprod">Elegí un producto</div>
-      <div class="pd" id="pdet">—</div>
+      <div class="pp" id="cart-resumen">0 productos</div>
+      <div class="pd" id="cart-pago-lbl">—</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <div class="pt" id="ptot">$0</div>
-      <input type="number" id="monto-manual" placeholder="Editar $"
-        style="width:110px;background:var(--bg3);border:1px solid var(--bv);border-radius:8px;padding:5px 10px;color:var(--vc);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;outline:none;text-align:right;display:none"
-        oninput="sobreescribirMonto(this.value)">
-      <div onclick="toggleMontoManual()" style="font-size:9px;color:var(--t2);cursor:pointer;letter-spacing:.5px">✏️ editar monto</div>
+      <div class="pt" id="cart-total">$0</div>
     </div>
   </div>
-  <div style="height:10px"></div>
-  <!-- Selector cliente -->
-  <div class="cl-sel">
-    <div class="cl-sel-btn" onclick="toggleClDrop()">
-      <div class="cl-sel-lbl" id="cl-sel-lbl">👤 Seleccionar cliente</div>
-      <div style="color:var(--t2);font-size:13px">▾</div>
-    </div>
-    <div class="cl-drop" id="cl-drop">
-      <div class="cl-drop-search"><input type="text" id="cl-search" placeholder="Buscar por nombre o ID..." oninput="renderClDropList(this.value)"></div>
-      <div class="cl-row" onclick="selCliente(null)" style="border-bottom:1px solid var(--bo)">
-        <div style="font-size:16px">➕</div>
-        <div><div style="font-size:13px;font-weight:600">Nuevo cliente</div><div style="font-size:10px;color:var(--t2)">Ir a pestaña Clientes para registrar</div></div>
-      </div>
-      <div id="cl-drop-list"></div>
-    </div>
+  <div style="padding:0 12px;margin-bottom:8px">
+    <input type="text" class="ni" id="fnota" placeholder="Nota para toda la venta (opcional)...">
   </div>
-  <div style="padding:0 12px"><button class="badd" id="badd" onclick="agregarVenta()" disabled>+ Registrar venta</button></div>
+  <div style="padding:0 12px"><button class="badd" id="badd" onclick="registrarCarrito()" disabled>✓ Registrar venta</button></div>
+
   <div class="sep"></div>
-  <div class="hh"><div class="htit">Ventas de hoy</div><button class="bclr" onclick="limpiarDia()">Limpiar día</button></div>
+
+  <!-- Agregar producto al carrito -->
+  <div class="sl">Agregar producto</div>
+  <div class="pgrid" id="pgrid"></div>
+  <div style="display:flex;align-items:center;gap:12px;padding:8px 12px 0">
+    <div class="clbl" style="flex:1">Cantidad</div>
+    <div class="ccc"><div class="cbtn" onclick="chgCant(-.5)">−</div><div class="cn" id="cnum">1</div><div class="cbtn" onclick="chgCant(.5)">+</div></div>
+    <button onclick="agregarAlCarrito()" id="btn-add-cart" disabled
+      style="background:var(--bg3);border:1px solid var(--bv);color:var(--vc);border-radius:var(--r12);padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+      + Agregar
+    </button>
+  </div>
+  <div style="height:6px"></div>
+  <div id="prod-sel-preview" style="padding:0 12px;height:28px"></div>
+
+  <div class="sep"></div>
+  <div class="hh"><div class="htit">Ventas del día</div><button class="bclr" onclick="limpiarDia()">Limpiar día</button></div>
   <div class="rbox" id="rbox"></div>
   <div id="vhoy"></div>
 </div>
@@ -424,65 +446,52 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   </div>
 </div>
 
-<!-- ══ BACKUP / IMPORTAR ══ -->
-<div style="margin:0 12px 12px">
-  <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding:16px 0 8px">Backup de datos</div>
+<!-- ══ CONFIGURACIÓN ══ -->
+<div id="tab-config" class="pg">
 
-  <!-- EXPORTAR -->
-  <div style="background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;margin-bottom:10px;box-shadow:var(--sh2)">
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px">⬇ Exportar todos los datos</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Descarga un archivo .json con ventas, clientes, productos y eventos.</div>
-    <button class="badd" onclick="exportarDatos()" style="background:rgba(92,184,92,.15);color:var(--vc);border:1px solid var(--bv)">⬇ Descargar backup.json</button>
-  </div>
-
-  <!-- IMPORTAR -->
-  <div style="background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)">
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px">⬆ Importar datos</div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Cargá un archivo backup.json para restaurar tus datos en este navegador.</div>
-    <label style="display:block;width:100%;background:rgba(92,184,92,.15);color:var(--vc);border:1px solid var(--bv);border-radius:var(--r12);padding:14px;font-size:14px;font-weight:700;cursor:pointer;text-align:center">
-      ⬆ Seleccionar archivo .json
-      <input type="file" accept=".json" onchange="importarDatos(this)" style="display:none">
-    </label>
-    <div id="import-status" style="margin-top:10px;font-size:11px;color:var(--t2);text-align:center;min-height:16px"></div>
-  </div>
-
-  <!-- FIREBASE SYNC -->
-  <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding:16px 0 8px">Sincronización Firebase</div>
-  <div style="background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)" id="fb-config-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:13px;font-weight:700">🔥 Firebase Realtime DB</div>
+  <!-- FIREBASE -->
+  <div style="padding:14px 16px 0"><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;border-bottom:1px solid var(--bo)">🔥 Sincronización Firebase</div></div>
+  <div style="margin:10px 12px;background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700">Firebase Realtime DB</div>
       <div class="fb-pill" id="fb-status-pill"><div class="fb-dot" id="fb-dot" style="background:#555"></div><span id="fb-status-txt">no configurado</span></div>
     </div>
-    <div style="font-size:11px;color:var(--t2);margin-bottom:12px">Pegá la URL de tu Firebase Realtime Database para sincronizar entre dispositivos en tiempo real.</div>
-    <div class="fg1">
-      <div class="il">URL de Firebase</div>
-      <input class="inp" id="fb-url-inp" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" style="font-size:12px">
-    </div>
-    <div class="fg1">
-      <div class="il">Clave de acceso (opcional)</div>
-      <input class="inp" id="fb-key-inp" placeholder="Dejá vacío si las reglas son públicas" style="font-size:12px" type="password">
-    </div>
-    <div style="background:var(--bg4);border-radius:var(--r8);padding:10px 12px;font-size:11px;color:var(--t2);margin-bottom:12px;line-height:1.5">
-      💡 <strong style="color:var(--t)">Cómo configurar:</strong> Creá un proyecto gratis en <strong style="color:var(--vc)">firebase.google.com</strong> → Realtime Database → Copiar URL. En reglas, seteá <code style="color:var(--amber)">"read":true,"write":true</code> para uso interno.
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="badd" onclick="guardarFbConfig()" style="flex:1;background:rgba(255,152,0,.15);color:var(--amber);border:1px solid rgba(255,152,0,.3)">💾 Guardar config</button>
+    <div class="fg1"><div class="il">URL de Firebase</div><input class="inp" id="fb-url-inp" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" style="font-size:12px"></div>
+    <div class="fg1"><div class="il">Clave de acceso (opcional)</div><input class="inp" id="fb-key-inp" placeholder="Dejá vacío si las reglas son públicas" style="font-size:12px" type="password"></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="badd" onclick="guardarFbConfig()" style="flex:1;background:rgba(255,152,0,.15);color:var(--amber);border:1px solid rgba(255,152,0,.3)">💾 Guardar</button>
       <button class="badd" onclick="testFbConexion()" style="flex:1;background:rgba(92,184,92,.15);color:var(--vc);border:1px solid var(--bv)">🔌 Probar</button>
     </div>
-    <div id="fb-test-result" style="margin-top:8px;font-size:11px;text-align:center;min-height:14px;color:var(--t2)"></div>
+    <div id="fb-test-result" style="font-size:11px;text-align:center;min-height:14px;color:var(--t2)"></div>
   </div>
 
-  <!-- INSTALAR COMO APP -->
-  <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding:16px 0 8px">Instalar como app</div>
-  <div style="background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;margin-bottom:8px;box-shadow:var(--sh2)">
-    <button id="btn-instalar" class="badd" onclick="window.installPWA()" style="display:none;background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);margin-bottom:10px">📲 Instalar en este dispositivo</button>
-    <div style="font-size:11px;color:var(--t2);line-height:1.7">
+  <!-- BACKUP -->
+  <div style="padding:14px 16px 0"><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;border-bottom:1px solid var(--bo)">💾 Backup de datos</div></div>
+  <div style="margin:10px 12px;background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)">
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">Exportá todos tus datos (ventas, clientes, productos, eventos) a un archivo .json.</div>
+    <button class="badd" onclick="exportarDatos()" style="background:rgba(92,184,92,.15);color:var(--vc);border:1px solid var(--bv);margin-bottom:10px">⬇ Descargar backup.json</button>
+    <label style="display:block;width:100%;background:var(--bg3);color:var(--t2);border:1px solid var(--bo);border-radius:var(--r12);padding:12px;font-size:13px;font-weight:700;cursor:pointer;text-align:center">
+      ⬆ Importar backup.json
+      <input type="file" accept=".json" onchange="importarDatos(this)" style="display:none">
+    </label>
+    <div id="import-status" style="margin-top:8px;font-size:11px;color:var(--t2);text-align:center;min-height:14px"></div>
+  </div>
+
+  <!-- INSTALAR -->
+  <div style="padding:14px 16px 0"><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;border-bottom:1px solid var(--bo)">📲 Instalar como app</div></div>
+  <div style="margin:10px 12px 20px;background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)">
+    <button id="btn-instalar" class="badd" onclick="window.installPWA()" style="display:none;background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);margin-bottom:12px">📲 Instalar en este dispositivo</button>
+    <div style="font-size:11px;color:var(--t2);line-height:1.9">
       📱 <strong style="color:var(--t)">iPhone/iPad:</strong> Compartir ↑ → "Agregar a pantalla de inicio"<br>
-      🤖 <strong style="color:var(--t)">Android / Chrome:</strong> Menú ⋮ → "Instalar aplicación"<br>
-      💻 <strong style="color:var(--t)">PC / Mac:</strong> Ícono ⊕ en la barra de URL del navegador
+      🤖 <strong style="color:var(--t)">Android:</strong> Menú ⋮ → "Instalar aplicación"<br>
+      💻 <strong style="color:var(--t)">PC/Mac:</strong> Ícono ⊕ en la barra de URL
     </div>
   </div>
-</div> onclick="if(event.target===this)closeMo('mo-cl')">
+
+</div>
+
+<!-- MODAL EDITAR CLIENTE -->
+<div class="mo" id="mo-cl" onclick="if(event.target===this)closeMo('mo-cl')">
   <div class="mbox">
     <div class="mtit">✏️ Editar cliente</div>
     <div class="fg2">
@@ -762,69 +771,144 @@ function showTab(id, el){
   if(id==='prods') renderAdm();
 }
 
-// ── CAJA ─────────────────────────────────────────────────
+// ── CAJA — CARRITO MÚLTIPLE ───────────────────────────────
+let carrito = []; // [{prod, cantidad, total}]
+
 function renderPG(){
-  const g=$('pgrid'); g.innerHTML='';
-  prods.forEach(p=>{
-    const el=document.createElement('div');
-    el.className='pb'+(sel&&sel.id===p.id?' sel':'');
-    el.innerHTML='<div class="pic">'+p.icon+'</div><div class="pnm">'+p.nombre+'</div><div class="ppr">'+fmt(p.precio)+'</div>';
-    el.onclick=()=>selProd(p.id);
-    g.appendChild(el);
+  const g=$('pgrid'); if(!g) return;
+  g.innerHTML='';
+  prods.filter(p=>p.activo!==false).forEach(p=>{
+    const b=document.createElement('div'); b.className='pb'; b.dataset.id=p.id;
+    b.innerHTML='<div class="pic">'+p.icon+'</div><div class="pnm">'+p.nombre+'</div><div class="ppr">'+fmt(p.precio)+'</div>';
+    b.onclick=()=>selProd(p,b);
+    g.appendChild(b);
   });
 }
 function renderGG(){
-  const g=$('ggrid'); g.innerHTML='';
-  ['Efectivo','Transferencia','Tarjeta','Mercado Pago'].forEach(pg=>{
-    const el=document.createElement('div');
-    el.className='gbtn'+(pago===pg?' sel':'');
-    el.textContent=pg;
-    el.onclick=()=>{pago=pg; renderGG();};
-    g.appendChild(el);
-  });
+  const g=$('ggrid'); if(!g) return;
+  const opts=['Efectivo','Transferencia','Tarjeta','Mercado Pago'];
+  g.innerHTML=opts.map(o=>'<div class="gbtn'+(pago===o?' sel':'')+'" onclick="setPago(\''+o+'\')">'+o+'</div>').join('');
 }
-function selProd(id){ sel=prods.find(p=>p.id===id); renderPG(); updPrev(); }
-function chgCant(d){ cant=Math.max(.5,cant+d); $('cnum').textContent=Number.isInteger(cant)?cant:cant.toFixed(1); updPrev(); }
-function updPrev(){
-  if(!sel) return;
-  const tot = montoSobreescrito!==null ? montoSobreescrito : sel.precio*cant;
-  $('pprod').textContent=sel.icon+' '+sel.nombre;
-  $('pdet').textContent=cant+' × '+fmt(sel.precio)+(montoSobreescrito!==null?' ✏️':'');
-  $('ptot').textContent=fmt(tot);
-  $('badd').disabled=false;
+function setPago(p){ pago=p; renderGG(); actualizarCartPreview(); }
+function selProd(p,el){
+  sel=p;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  $('btn-add-cart').disabled=false;
+  const prev=$('prod-sel-preview');
+  if(prev) prev.innerHTML='<div style="font-size:12px;color:var(--vc);font-weight:700">'+p.icon+' '+p.nombre+' — '+fmt(p.precio)+' c/u</div>';
 }
-function toggleMontoManual(){
-  const inp=$('monto-manual');
-  inp.style.display = inp.style.display==='none' ? 'block':'none';
-  if(inp.style.display==='block'){ inp.value=montoSobreescrito||''; inp.focus(); }
-  else { montoSobreescrito=null; updPrev(); }
-}
-function sobreescribirMonto(v){
-  montoSobreescrito = parseFloat(v)||null;
-  if(montoSobreescrito!==null) $('ptot').textContent=fmt(montoSobreescrito);
+function chgCant(d){
+  cant=Math.max(.5,Math.round((cant+d)*2)/2);
+  $('cnum').textContent=cant%1===0?cant:cant;
 }
 
-async function agregarVenta(){
+function agregarAlCarrito(){
   if(!sel) return;
+  const idx = carrito.findIndex(i=>i.prod.id===sel.id);
+  if(idx>=0){ carrito[idx].cantidad+=cant; carrito[idx].total=carrito[idx].cantidad*carrito[idx].prod.precio; }
+  else { carrito.push({prod:sel, cantidad:cant, total:sel.precio*cant}); }
+  const nombre = sel.nombre;
+  cant=1; $('cnum').textContent='1';
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('sel'));
+  sel=null; $('btn-add-cart').disabled=true;
+  const prev=$('prod-sel-preview'); if(prev) prev.innerHTML='';
+  renderCarrito();
+  toast('+ '+nombre+' agregado al carrito');
+}
+
+function renderCarrito(){
+  const lista=$('carrito-lista'); if(!lista) return;
+  const empty=$('carrito-empty');
+  if(!carrito.length){
+    if(empty) empty.style.display='block';
+    $('badd').disabled=true;
+    actualizarCartPreview(); return;
+  }
+  if(empty) empty.style.display='none';
+  $('badd').disabled=false;
+  const items = carrito.map((item,i)=>`
+    <div style="display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03);gap:10px">
+      <div style="font-size:18px;width:26px;text-align:center;flex-shrink:0">${item.prod.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:var(--t)">${item.prod.nombre}</div>
+        <div style="font-size:10px;color:var(--t2)">${item.cantidad} u × ${fmt(item.prod.precio)}</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--vc);white-space:nowrap">${fmt(item.total)}</div>
+      <div onclick="quitarDelCarrito(${i})" style="color:var(--t3);font-size:18px;cursor:pointer;padding:0 4px;font-weight:700;flex-shrink:0">×</div>
+    </div>`).join('');
+  lista.innerHTML = items;
+  actualizarCartPreview();
+}
+
+function quitarDelCarrito(i){
+  carrito.splice(i,1);
+  renderCarrito();
+}
+function limpiarCarrito(){
+  carrito=[]; cant=1; sel=null;
+  $('cnum').textContent='1';
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('sel'));
+  const prev=$('prod-sel-preview'); if(prev) prev.innerHTML='';
+  $('btn-add-cart').disabled=true;
+  renderCarrito();
+}
+
+function actualizarCartPreview(){
+  const total = carrito.reduce((s,i)=>s+i.total,0);
+  const cant_items = carrito.reduce((s,i)=>s+i.cantidad,0);
+  const res=$('cart-resumen'); const pl=$('cart-pago-lbl'); const ct=$('cart-total');
+  if(res) res.textContent = carrito.length ? carrito.length+' producto'+(carrito.length>1?'s':'')+' · '+cant_items+' u.' : '0 productos';
+  if(pl) pl.textContent = pago || '—';
+  if(ct) ct.textContent = fmt(total);
+}
+
+async function registrarCarrito(){
+  if(!carrito.length) return;
   const fecha=$('ffecha').value;
+  const nota=$('fnota').value.trim();
+  const clienteNombre = clSelActual ? clSelActual.nombre : null;
   const ts=new Date(new Date().getTime()-3*60*60*1000).toISOString();
-  const totalFinal = montoSobreescrito!==null ? montoSobreescrito : sel.precio*cant;
-  const v={fecha,producto:sel.nombre,icon:sel.icon,cantidad:cant,precio:sel.precio,total:totalFinal,pago,nota:$('fnota').value.trim(),timestamp:ts};
-  if(!cache[fecha]) cache[fecha]=[];
-  cache[fecha].push(v); saveV();
-  // Vincular a cliente si está seleccionado
-  vincularVenta(v);
-  // Reset
+  const totalVenta = carrito.reduce((s,i)=>s+i.total,0);
+
+  // Guardar cada item como venta separada pero con mismo timestamp grupo
+  carrito.forEach((item,idx)=>{
+    const v={
+      fecha, producto:item.prod.nombre, icon:item.prod.icon,
+      cantidad:item.cantidad, precio:item.prod.precio, total:item.total,
+      pago, nota, timestamp: idx===0 ? ts : ts+'_'+idx,
+      cliente: clienteNombre, grupoTs: ts
+    };
+    if(!cache[fecha]) cache[fecha]=[];
+    cache[fecha].push(v);
+  });
+  saveV();
+
+  // Vincular todo a cliente
+  if(clSelActual){
+    const c = clientesDB.find(x=>x.id===clSelActual.id);
+    if(c){
+      c.visitas = (c.visitas||0)+1;
+      c.totalGastado = (c.totalGastado||0)+totalVenta;
+      if(!c.historial) c.historial=[];
+      c.historial.unshift({fecha, productos:carrito.map(i=>i.prod.nombre+' ×'+i.cantidad).join(', '), total:totalVenta});
+      if(c.historial.length>200) c.historial=c.historial.slice(0,200);
+      saveCL();
+    }
+  }
+
+  toast('✓ Venta registrada — '+fmt(totalVenta));
+  limpiarCarrito();
   clSelActual=null; selCliente(null);
-  montoSobreescrito=null;
-  const mm=$('monto-manual'); if(mm){mm.style.display='none';mm.value='';}
-  cant=1; $('cnum').textContent='1'; $('fnota').value='';
-  updPrev(); renderVH(fecha); renderRes(fecha); updHdr(fecha);
-  toast('✓ '+v.producto+' — '+fmt(v.total));
+  $('fnota').value='';
+  renderVH(fecha); renderRes(fecha); updHdr(fecha);
   syncDot('syn');
-  try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'add',...v})}); syncDot('ok'); }
+  try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'add',fecha,total:totalVenta,pago,cliente:clienteNombre})}); syncDot('ok'); }
   catch(e){ syncDot('err'); }
 }
+
+// Compatibilidad: agregarVenta ahora apunta a registrarCarrito
+function agregarVenta(){ return registrarCarrito(); }
 
 function vincularVenta(v){
   if(!clSelActual) return;
@@ -864,31 +948,75 @@ async function limpiarDia(){
   delete cache[fecha]; saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Día limpiado');
   try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'limpiarDia',fecha})}); }catch(e){}
 }
+
 function renderVH(fecha){
   const vs=[...(cache[fecha]||[])].reverse(); const el=$('vhoy');
   if(!vs.length){el.innerHTML='<div class="empty">Sin ventas hoy</div>';return;}
-  el.innerHTML=''; vs.forEach(v=>{
-    const div=document.createElement('div'); div.className='vi';
-    div.innerHTML='<div class="vic">'+(v.icon||'🍺')+'</div>'
-      +'<div class="vif"><div class="vip">'+v.producto+(v.nota?' · <span style="color:var(--t2)">'+v.nota+'</span>':'')+'</div>'
-      +'<div class="vim">'+v.cantidad+'u · '+v.pago+'</div></div>'
-      +'<div class="vit">'+fmt(v.total)+'</div>'
-      +'<div style="display:flex;gap:3px;flex-shrink:0">'
-      +'<button class="bsm be" style="padding:3px 6px;font-size:11px" data-f="'+fecha+'" data-ts="'+encodeURIComponent(v.timestamp)+'" onclick="openEditVentaEl(this)">✏️</button>'
-      +'<div class="vdel" data-f="'+fecha+'" data-ts="'+encodeURIComponent(v.timestamp)+'" onclick="elimVentaEl(this)">×</div>'
-      +'</div>';
+  // Agrupar por grupoTs para mostrar ventas multi-producto juntas
+  const grupos={};
+  vs.forEach(v=>{
+    const key = v.grupoTs || v.timestamp;
+    if(!grupos[key]) grupos[key]={items:[],pago:v.pago,cliente:v.cliente||null,nota:v.nota||'',timestamp:v.timestamp,fecha:v.fecha,grupoTs:key};
+    grupos[key].items.push(v);
+  });
+  el.innerHTML='';
+  Object.values(grupos).forEach(g=>{
+    const totalGrupo = g.items.reduce((s,v)=>s+v.total,0);
+    const esMultiple = g.items.length>1;
+    const div=document.createElement('div');
+    div.className='vi'; div.style.flexDirection='column'; div.style.alignItems='stretch'; div.style.gap='4px';
+    const clienteHTML = g.cliente ? '<span style="font-size:10px;background:rgba(92,184,92,.12);color:var(--vc);border-radius:20px;padding:1px 8px;font-weight:600">👤 '+g.cliente+'</span>' : '';
+    const notaHTML = g.nota ? ' · <span style="color:var(--t2)">'+g.nota+'</span>' : '';
+    if(esMultiple){
+      const prodsHTML = g.items.map(v=>'<span style="font-size:10px;color:var(--t2)">'+v.icon+' '+v.producto+' ×'+v.cantidad+'</span>').join(' ');
+      div.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
+        <div style="font-size:20px;width:30px;text-align:center;flex-shrink:0">🛒</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--t);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            ${g.items.length} productos${notaHTML} ${clienteHTML}
+          </div>
+          <div style="font-size:10px;color:var(--t2);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap">${prodsHTML}</div>
+          <div style="font-size:10px;color:var(--t2);margin-top:1px">${g.pago}</div>
+        </div>
+        <div style="font-family:'Fraunces',serif;font-size:14px;font-weight:700;color:var(--vc);white-space:nowrap">${fmt(totalGrupo)}</div>
+        <div style="display:flex;gap:3px;flex-shrink:0">
+          <div class="vdel" data-f="${g.fecha}" data-ts="${encodeURIComponent(g.grupoTs)}" onclick="elimGrupo(this)">×</div>
+        </div>
+      </div>`;
+    } else {
+      const v=g.items[0];
+      div.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px">
+        <div class="vic">${v.icon||'🍺'}</div>
+        <div class="vif">
+          <div class="vip" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${v.producto}${notaHTML} ${clienteHTML}</div>
+          <div class="vim">${v.cantidad} u · ${v.pago}</div>
+        </div>
+        <div class="vit">${fmt(v.total)}</div>
+        <div style="display:flex;gap:3px;flex-shrink:0">
+          <button class="bsm be" style="padding:3px 6px;font-size:11px" data-f="${g.fecha}" data-ts="${encodeURIComponent(v.timestamp)}" onclick="openEditVentaEl(this)">✏️</button>
+          <div class="vdel" data-f="${g.fecha}" data-ts="${encodeURIComponent(v.timestamp)}" onclick="elimVentaEl(this)">×</div>
+        </div>
+      </div>`;
+    }
     el.appendChild(div);
   });
 }
+
+function elimGrupo(el){
+  const fecha=el.dataset.f; const grupoTs=decodeURIComponent(el.dataset.ts);
+  cache[fecha]=(cache[fecha]||[]).filter(v=>(v.grupoTs||v.timestamp)!==grupoTs);
+  saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Venta eliminada');
+}
 function openEditVentaEl(el){ openEditVenta(el.dataset.f, decodeURIComponent(el.dataset.ts)); }
 function elimVentaEl(el){ elimVenta(el.dataset.f, decodeURIComponent(el.dataset.ts)); }
+
 function renderRes(fecha){
   const vs=cache[fecha]||[]; const el=$('rbox');
   if(!vs.length){el.innerHTML='<div class="rr"><span>Sin ventas</span><span>—</span></div>';return;}
   const tots={}; let gran=0;
   vs.forEach(v=>{tots[v.pago]=(tots[v.pago]||0)+v.total; gran+=v.total;});
   el.innerHTML=Object.entries(tots).map(([k,v])=>'<div class="rr"><span>'+k+'</span><span>'+fmt(v)+'</span></div>').join('')
-    +'<div class="rr rrt"><span>Total — '+vs.length+' ventas</span><span>'+fmt(gran)+'</span></div>';
+    +'<div class="rr rrt"><span>Total — '+vs.length+' registros</span><span>'+fmt(gran)+'</span></div>';
 }
 function updHdr(fecha){ $('htot').textContent=fmt((cache[fecha]||[]).reduce((s,v)=>s+v.total,0)); }
 function cargarDia(){ const f=$('ffecha').value; renderVH(f); renderRes(f); updHdr(f); }
@@ -2071,19 +2199,23 @@ ${proyHTML}
   win.onload = ()=>{ setTimeout(()=>{ win.focus(); win.print(); }, 400); };
 }
 
-// Patch showTab para cargar dash
+// Patch showTab para cargar dash y config
 const _origShowTab = showTab;
 window.showTab = function(id, el){
   _origShowTab(id, el);
   if(id==='dashboard'){ initDashSelectors(); renderDash(); }
+  if(id==='config'){
+    const uInp=document.getElementById('fb-url-inp');
+    if(uInp&&fbUrl) uInp.value=fbUrl;
+    const kInp=document.getElementById('fb-key-inp');
+    if(kInp&&fbKey) kInp.value=fbKey;
+  }
 };
 
 const fechaHoy=hoy();
 $('ffecha').value=fechaHoy;
-// Restaurar evento en curso
 if(_evGuardado&&_evGuardado.nombre) $('ev-nombre').value=_evGuardado.nombre;
-renderPG(); renderGG(); cargarDia();
-// Setear mes actual en selector ranking
+renderPG(); renderGG(); renderCarrito(); cargarDia();
 const _rankMesSel=document.getElementById('rank-mes-sel');
 if(_rankMesSel){ const _hm=String(new Date().getMonth()+1).padStart(2,'0'); _rankMesSel.value=_hm; }
 sincronizar();

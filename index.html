@@ -834,10 +834,23 @@ function renderCarrito(){
         <div style="font-size:12px;font-weight:700;color:var(--t)">${item.prod.nombre}</div>
         <div style="font-size:10px;color:var(--t2)">${item.cantidad} u × ${fmt(item.prod.precio)}</div>
       </div>
-      <div style="font-size:13px;font-weight:700;color:var(--vc);white-space:nowrap">${fmt(item.total)}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div style="font-size:13px;font-weight:700;color:var(--vc);white-space:nowrap">${fmt(item.total)}</div>
+        <input type="number" value="${item.total}"
+          onchange="editarTotalItem(${i}, this.value)"
+          style="width:90px;background:var(--bg4);border:1px solid var(--bv);border-radius:6px;padding:3px 7px;color:var(--vc);font-size:11px;font-weight:700;outline:none;text-align:right"
+          placeholder="Editar $">
+      </div>
       <div onclick="quitarDelCarrito(${i})" style="color:var(--t3);font-size:18px;cursor:pointer;padding:0 4px;font-weight:700;flex-shrink:0">×</div>
     </div>`).join('');
   lista.innerHTML = items;
+  actualizarCartPreview();
+}
+
+function editarTotalItem(i, valor){
+  const nuevo = parseFloat(valor);
+  if(isNaN(nuevo)||nuevo<0) return;
+  carrito[i].total = nuevo;
   actualizarCartPreview();
 }
 

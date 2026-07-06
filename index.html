@@ -1543,7 +1543,7 @@ async function sincronizar(manual=false){
   // Service Worker inline
   if('serviceWorker' in navigator){
     const sw = `
-const CACHE='emj-v2';
+const CACHE='emj-v3';
 const ASSETS=['./'${','}'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=DM+Sans:wght@300;400;500;600;700&display=swap'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).catch(()=>{})));
@@ -1555,6 +1555,9 @@ self.addEventListener('activate',e=>{
 });
 self.addEventListener('fetch',e=>{
   if(e.request.method!=='GET') return;
+  // No interceptar llamadas a Firebase ni a APIs externas
+  const url = e.request.url;
+  if(url.includes('firebaseio.com')||url.includes('googleapis.com')||url.includes('firebase')) return;
   e.respondWith(fetch(e.request).then(r=>{
     const clone=r.clone();
     caches.open(CACHE).then(c=>c.put(e.request,clone));

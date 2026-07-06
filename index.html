@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EMJ Caja">
@@ -1519,7 +1520,7 @@ async function sincronizar(manual=false){
     name: 'El Momento Justo — Caja',
     short_name: 'EMJ Caja',
     description: 'Sistema de caja y gestión para El Momento Justo',
-    start_url: './',
+    start_url: '/Emj-Ventas/',
     display: 'standalone',
     background_color: '#0e1512',
     theme_color: '#0e1512',
@@ -2232,8 +2233,4 @@ renderPG(); renderGG(); renderCarrito(); cargarDia();
 const _rankMesSel=document.getElementById('rank-mes-sel');
 if(_rankMesSel){ const _hm=String(new Date().getMonth()+1).padStart(2,'0'); _rankMesSel.value=_hm; }
 sincronizar();
-setInterval(()=>sincronizar(false),60000);
-</script>
-</body>
-</html>
-
+setInterv

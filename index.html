@@ -647,7 +647,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 <div class="toast" id="toast"></div>
 
 <script>
-const API='https://script.google.com/macros/s/AKfycbzcmGwhEQyv0G9NXIT19mdUpxfw2flDv-z5gx1Y29WcwX0cFYIUThNY53i8kTPAoSQ/exec';
+const API=''; // Google Apps Script desactivado — sync via Firebase
 
 // ── STORAGE KEYS ─────────────────────────────────────────
 const KP='emj_prods', KV='emj_ventas', KE='emj_eventos_hist';
@@ -916,7 +916,7 @@ async function registrarCarrito(){
   $('fnota').value='';
   renderVH(fecha); renderRes(fecha); updHdr(fecha);
   syncDot('syn');
-  try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'add',fecha,total:totalVenta,pago,cliente:clienteNombre})}); syncDot('ok'); }
+  if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'add',fecha,total:totalVenta,pago,cliente:clienteNombre})}); syncDot('ok'); }
   catch(e){ syncDot('err'); }
 }
 
@@ -938,7 +938,7 @@ function vincularVenta(v){
 async function elimVenta(fecha, ts){
   cache[fecha]=(cache[fecha]||[]).filter(v=>v.timestamp!==ts);
   saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Eliminado');
-  try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'delete',timestamp:ts})}); }catch(e){}
+  if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'delete',timestamp:ts})}); }catch(e){}
 }
 function openEditVenta(fecha, ts){
   _editFecha=fecha; _editTs=ts;
@@ -959,7 +959,7 @@ async function limpiarDia(){
   const fecha=$('ffecha').value; const vs=cache[fecha]||[];
   if(!vs.length) return; if(!confirm('¿Limpiar '+vs.length+' ventas?')) return;
   delete cache[fecha]; saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Día limpiado');
-  try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'limpiarDia',fecha})}); }catch(e){}
+  if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'limpiarDia',fecha})}); }catch(e){}
 }
 
 function renderVH(fecha){
@@ -1502,21 +1502,15 @@ function saveEditRank(){
 // ── SYNC ─────────────────────────────────────────────────
 async function sincronizar(manual=false){
   syncDot('syn');
-  try{
-    const r=await fetch(API+'?action=getLast30'); const data=await r.json();
-    const nuevo={};
-    data.forEach(row=>{
-      if(!row[0]||row[0]==='fecha') return;
-      const fecha=typeof row[0]==='string'?row[0].substring(0,10):''; if(!fecha||fecha.length<8) return;
-      if(!nuevo[fecha]) nuevo[fecha]=[];
-      const p=prods.find(x=>x.nombre===row[1]);
-      nuevo[fecha].push({fecha,producto:row[1],icon:p?.icon||'🍺',cantidad:+row[2],precio:+row[3],total:+row[4],pago:row[5],nota:row[6]||'',timestamp:row[7]||''});
-    });
-    cache=Object.assign({},nuevo); saveV(); syncDot('ok');
-    cargarDia();
-    if($('tab-hist').classList.contains('active')) renderH30();
+  // Sync via Firebase únicamente
+  if(fbUrl){
+    const updated = await fbPull();
+    if(updated){ cargarDia(); if($('tab-hist').classList.contains('active')) renderH30(); }
     if(manual) toast('✓ Sincronizado');
-  }catch(e){ if(manual){syncDot('err');toast('Sin conexión','er');}else{syncDot('local');} }
+  } else {
+    syncDot('local');
+    if(manual) toast('Sin conexión Firebase','er');
+  }
 }
 
 // ── PWA SETUP ──────────────────────────────────────────────

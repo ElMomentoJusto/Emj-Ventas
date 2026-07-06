@@ -1583,8 +1583,12 @@ self.addEventListener('fetch',e=>{
 // ── FIREBASE SYNC ──────────────────────────────────────────
 const KFB = 'emj_fb_url';
 const KFBkey = 'emj_fb_key';
-let fbUrl = localStorage.getItem(KFB) || '';
+// URL hardcodeada — funciona en todos los dispositivos sin configuración manual
+const FB_URL_DEFAULT = 'https://emj-caja-default-rtdb.firebaseio.com';
+let fbUrl = localStorage.getItem(KFB) || FB_URL_DEFAULT;
 let fbKey = localStorage.getItem(KFBkey) || '';
+// Guardar la default si no había nada
+if(!localStorage.getItem(KFB)) localStorage.setItem(KFB, FB_URL_DEFAULT);
 let fbOnline = false;
 let fbSyncTimer = null;
 
@@ -1705,11 +1709,10 @@ function iniciarSyncFb(){
 }
 
 // Inicializar Firebase si ya estaba configurado
-if(fbUrl){
-  const uInp = document.getElementById('fb-url-inp');
-  if(uInp) uInp.value = fbUrl;
-  testFbConexion();
-}
+// Conectar Firebase automáticamente al cargar — sin necesidad de configuración manual
+const uInp = document.getElementById('fb-url-inp');
+if(uInp) uInp.value = fbUrl;
+iniciarSyncFb(); // arrancar sync directo
 
 // Patch agregarVenta para pushear a Firebase
 const _origAgregarVenta = agregarVenta;

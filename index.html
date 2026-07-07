@@ -763,13 +763,20 @@ function closeMo(id){ $(id).classList.remove('op'); }
 function showTab(id, el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tb').forEach(t=>t.classList.remove('active'));
-  $('tab-'+id).classList.add('active');
+  const tabEl = $('tab-'+id);
+  if(!tabEl) return;
+  tabEl.classList.add('active');
   el.classList.add('active');
   if(id==='hist') renderH30();
   if(id==='crm') { renderBase(''); actualizarIdPrev(); }
   if(id==='ranking') renderRanking('total');
   if(id==='eventos') { renderEvPGrid(); renderEvPersonas(); renderEvSelPersona(); renderEvResumen(); renderSugerencias(); }
   if(id==='prods') renderAdm();
+  if(id==='dashboard'){ initDashSelectors(); renderDash(); }
+  if(id==='config'){
+    const uInp=document.getElementById('fb-url-inp');
+    if(uInp&&fbUrl) uInp.value=fbUrl;
+  }
 }
 
 // ── CAJA — CARRITO MÚLTIPLE ───────────────────────────────
@@ -1535,30 +1542,15 @@ async function sincronizar(manual=false){
   const link = document.getElementById('pwa-manifest');
   if(link) link.href = url;
 
-  // Service Worker inline
+  // Service Worker — solo limpia caches viejos, no cachea nada
   if('serviceWorker' in navigator){
     const sw = `
-const CACHE='emj-v3';
-const ASSETS=['./'${','}'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=DM+Sans:wght@300;400;500;600;700&display=swap'];
-self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).catch(()=>{})));
-  self.skipWaiting();
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+self.addEventListener('install', e=>{ self.skipWaiting(); });
+self.addEventListener('activate', e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))));
   self.clients.claim();
 });
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET') return;
-  // No interceptar llamadas a Firebase ni a APIs externas
-  const url = e.request.url;
-  if(url.includes('firebaseio.com')||url.includes('googleapis.com')||url.includes('firebase')) return;
-  e.respondWith(fetch(e.request).then(r=>{
-    const clone=r.clone();
-    caches.open(CACHE).then(c=>c.put(e.request,clone));
-    return r;
-  }).catch(()=>caches.match(e.request)));
-});`;
+self.addEventListener('fetch', e=>{ /* sin cache — siempre red */ });`;
     const swBlob = new Blob([sw], {type:'text/javascript'});
     const swUrl  = URL.createObjectURL(swBlob);
     navigator.serviceWorker.register(swUrl).catch(()=>{});
@@ -2213,19 +2205,6 @@ ${proyHTML}
   win.onload = ()=>{ setTimeout(()=>{ win.focus(); win.print(); }, 400); };
 }
 
-// Patch showTab para cargar dash y config
-const _origShowTab = showTab;
-window.showTab = function(id, el){
-  _origShowTab(id, el);
-  if(id==='dashboard'){ initDashSelectors(); renderDash(); }
-  if(id==='config'){
-    const uInp=document.getElementById('fb-url-inp');
-    if(uInp&&fbUrl) uInp.value=fbUrl;
-    const kInp=document.getElementById('fb-key-inp');
-    if(kInp&&fbKey) kInp.value=fbKey;
-  }
-};
-
 const fechaHoy=hoy();
 $('ffecha').value=fechaHoy;
 if(_evGuardado&&_evGuardado.nombre) $('ev-nombre').value=_evGuardado.nombre;
@@ -2233,4 +2212,8 @@ renderPG(); renderGG(); renderCarrito(); cargarDia();
 const _rankMesSel=document.getElementById('rank-mes-sel');
 if(_rankMesSel){ const _hm=String(new Date().getMonth()+1).padStart(2,'0'); _rankMesSel.value=_hm; }
 sincronizar();
-setInterv
+setInterval(()=>sincronizar(false),60000);
+</script>
+</body>
+</html>
+

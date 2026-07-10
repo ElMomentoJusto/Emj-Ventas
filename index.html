@@ -1659,20 +1659,58 @@ async function fbPull(){
     const r = await fetch(`${fbUrl}/emj_data.json${auth}`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data = await r.json();
-    if(!data || !data.last_update) { syncDot('local'); return false; }
+    if(!data) { syncDot('local'); return false; }
 
-    // Siempre tomar los datos de Firebase — es la fuente de verdad
-    if(data.emj_ventas)       { cache = data.emj_ventas;             saveV(); }
-    if(data.emj_clientes_db)  { clientesDB = data.emj_clientes_db;   saveCL(); }
-    if(data.emj_eventos_hist) { eventosHist = data.emj_eventos_hist;  saveE(); }
-    if(data.emj_prods)        { prods = data.emj_prods;              saveP(); }
-    localStorage.setItem('emj_last_update', String(data.last_update));
+    let changed = false;
 
-    // Refrescar UI
-    renderPG(); renderGG(); renderAdm();
-    cargarDia(); renderSugerencias();
+    // MERGE ventas — combinar Firebase con local, nunca borrar
+    if(data.emj_ventas && typeof data.emj_ventas === 'object'){
+      Object.keys(data.emj_ventas).forEach(fecha=>{
+        if(!cache[fecha]){
+          cache[fecha] = data.emj_ventas[fecha];
+          changed = true;
+        } else {
+          // Agregar ventas que están en Firebase pero no en local
+          const tsLocales = new Set((cache[fecha]||[]).map(v=>v.timestamp));
+          const nuevas = (data.emj_ventas[fecha]||[]).filter(v=>!tsLocales.has(v.timestamp));
+          if(nuevas.length){ cache[fecha] = [...cache[fecha], ...nuevas]; changed = true; }
+        }
+      });
+      if(changed) saveV();
+    }
+
+    // Clientes — tomar Firebase solo si local está vacío
+    if(data.emj_clientes_db && Array.isArray(data.emj_clientes_db)){
+      if(!clientesDB.length){ clientesDB = data.emj_clientes_db; saveCL(); changed = true; }
+      else {
+        // Merge: agregar clientes nuevos de Firebase que no están en local
+        const idsLocales = new Set(clientesDB.map(c=>c.id));
+        const nuevos = data.emj_clientes_db.filter(c=>!idsLocales.has(c.id));
+        if(nuevos.length){ clientesDB = [...clientesDB, ...nuevos]; saveCL(); changed = true; }
+      }
+    }
+
+    // Eventos — merge por nombre+fecha
+    if(data.emj_eventos_hist && Array.isArray(data.emj_eventos_hist)){
+      if(!eventosHist.length){ eventosHist = data.emj_eventos_hist; saveE(); changed = true; }
+    }
+
+    // Productos — tomar Firebase solo si local está vacío
+    if(data.emj_prods && Array.isArray(data.emj_prods)){
+      if(!prods.length){ prods = data.emj_prods; saveP(); changed = true; }
+    }
+
+    if(changed){
+      renderPG(); renderGG(); renderAdm();
+      cargarDia(); renderSugerencias();
+    }
+
     syncDot('ok');
-    return true;
+
+    // Después del merge, subir el resultado combinado a Firebase
+    if(changed) setTimeout(()=>fbPush(), 1000);
+
+    return changed;
   } catch(e){
     syncDot('err');
     return false;

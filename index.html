@@ -1510,15 +1510,8 @@ function saveEditRank(){
 // ── SYNC ─────────────────────────────────────────────────
 async function sincronizar(manual=false){
   syncDot('syn');
-  // Sync via Firebase únicamente
-  if(fbUrl){
-    const updated = await fbPull();
-    if(updated){ cargarDia(); if($('tab-hist').classList.contains('active')) renderH30(); }
-    if(manual) toast('✓ Sincronizado');
-  } else {
-    syncDot('local');
-    if(manual) toast('Sin conexión Firebase','er');
-  }
+  const updated = await fbPull();
+  if(manual) toast(updated ? '✓ Sincronizado' : '✓ Al día');
 }
 
 // ── PWA SETUP ──────────────────────────────────────────────
@@ -1666,25 +1659,22 @@ async function fbPull(){
     const r = await fetch(`${fbUrl}/emj_data.json${auth}`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data = await r.json();
-    if(!data || !data.last_update) return false;
+    if(!data || !data.last_update) { syncDot('local'); return false; }
 
-    // Solo actualizar si los datos remotos son más nuevos
-    const localTs = parseInt(localStorage.getItem('emj_last_update')||'0');
-    if(data.last_update <= localTs) return false;
-
-    if(data.emj_ventas)       { cache = data.emj_ventas;            saveV(); }
-    if(data.emj_clientes_db)  { clientesDB = data.emj_clientes_db;  saveCL(); }
-    if(data.emj_eventos_hist) { eventosHist = data.emj_eventos_hist; saveE(); }
-    if(data.emj_prods)        { prods = data.emj_prods;             saveP(); }
-    localStorage.setItem('emj_last_update', data.last_update);
+    // Siempre tomar los datos de Firebase — es la fuente de verdad
+    if(data.emj_ventas)       { cache = data.emj_ventas;             saveV(); }
+    if(data.emj_clientes_db)  { clientesDB = data.emj_clientes_db;   saveCL(); }
+    if(data.emj_eventos_hist) { eventosHist = data.emj_eventos_hist;  saveE(); }
+    if(data.emj_prods)        { prods = data.emj_prods;              saveP(); }
+    localStorage.setItem('emj_last_update', String(data.last_update));
 
     // Refrescar UI
     renderPG(); renderGG(); renderAdm();
     cargarDia(); renderSugerencias();
-    setFbDot('ok');
+    syncDot('ok');
     return true;
   } catch(e){
-    setFbDot('err');
+    syncDot('err');
     return false;
   }
 }
@@ -1693,9 +1683,9 @@ function iniciarSyncFb(){
   if(fbSyncTimer) clearInterval(fbSyncTimer);
   fbSyncTimer = setInterval(async ()=>{
     const updated = await fbPull();
-    if(updated) toast('↓ Datos actualizados desde otro dispositivo');
-  }, 15000); // cada 15 segundos
-  fbPull(); // pull inmediato
+    if(updated) toast('↓ Sincronizado');
+  }, 15000);
+  fbPull(); // pull inmediato al cargar
 }
 
 // Inicializar Firebase si ya estaba configurado

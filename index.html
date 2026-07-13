@@ -923,9 +923,9 @@ async function registrarCarrito(){
   clSelActual=null; selCliente(null);
   $('fnota').value='';
   renderVH(fecha); renderRes(fecha); updHdr(fecha);
+  // Subir a Firebase inmediatamente
   syncDot('syn');
-  if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'add',fecha,total:totalVenta,pago,cliente:clienteNombre})}); syncDot('ok'); }
-  catch(e){ syncDot('err'); }
+  try{ await fbPush(); syncDot('ok'); } catch(e){ syncDot('err'); }
 }
 
 // Compatibilidad: agregarVenta ahora apunta a registrarCarrito
@@ -1663,41 +1663,51 @@ async function fbPull(){
 
     let changed = false;
 
-    // MERGE ventas — combinar Firebase con local, nunca borrar
+    // MERGE ventas — agregar las que vienen de Firebase y no están en local
     if(data.emj_ventas && typeof data.emj_ventas === 'object'){
       Object.keys(data.emj_ventas).forEach(fecha=>{
-        if(!cache[fecha]){
-          cache[fecha] = data.emj_ventas[fecha];
+        const remotas = data.emj_ventas[fecha] || [];
+        const locales = cache[fecha] || [];
+        const tsLocales = new Set(locales.map(v=>v.timestamp));
+        const nuevas = remotas.filter(v=>v.timestamp && !tsLocales.has(v.timestamp));
+        if(nuevas.length){
+          cache[fecha] = [...locales, ...nuevas];
           changed = true;
-        } else {
-          // Agregar ventas que están en Firebase pero no en local
-          const tsLocales = new Set((cache[fecha]||[]).map(v=>v.timestamp));
-          const nuevas = (data.emj_ventas[fecha]||[]).filter(v=>!tsLocales.has(v.timestamp));
-          if(nuevas.length){ cache[fecha] = [...cache[fecha], ...nuevas]; changed = true; }
+        }
+        // También agregar fechas que no existen en local
+        if(!cache[fecha] && remotas.length){
+          cache[fecha] = remotas;
+          changed = true;
         }
       });
       if(changed) saveV();
     }
 
-    // Clientes — tomar Firebase solo si local está vacío
-    if(data.emj_clientes_db && Array.isArray(data.emj_clientes_db)){
-      if(!clientesDB.length){ clientesDB = data.emj_clientes_db; saveCL(); changed = true; }
-      else {
-        // Merge: agregar clientes nuevos de Firebase que no están en local
-        const idsLocales = new Set(clientesDB.map(c=>c.id));
-        const nuevos = data.emj_clientes_db.filter(c=>!idsLocales.has(c.id));
-        if(nuevos.length){ clientesDB = [...clientesDB, ...nuevos]; saveCL(); changed = true; }
-      }
+    // Clientes — merge por ID
+    if(data.emj_clientes_db && Array.isArray(data.emj_clientes_db) && data.emj_clientes_db.length){
+      const idsLocales = new Set(clientesDB.map(c=>c.id));
+      const nuevos = data.emj_clientes_db.filter(c=>!idsLocales.has(c.id));
+      if(nuevos.length){ clientesDB = [...clientesDB, ...nuevos]; saveCL(); changed = true; }
+      // Actualizar visitas y totalGastado si Firebase tiene más
+      data.emj_clientes_db.forEach(fc=>{
+        const lc = clientesDB.find(c=>c.id===fc.id);
+        if(lc && fc.totalGastado > (lc.totalGastado||0)){
+          lc.totalGastado = fc.totalGastado;
+          lc.visitas = fc.visitas;
+          changed = true;
+        }
+      });
+      if(changed) saveCL();
     }
 
-    // Eventos — merge por nombre+fecha
-    if(data.emj_eventos_hist && Array.isArray(data.emj_eventos_hist)){
+    // Eventos — merge
+    if(data.emj_eventos_hist && Array.isArray(data.emj_eventos_hist) && data.emj_eventos_hist.length){
       if(!eventosHist.length){ eventosHist = data.emj_eventos_hist; saveE(); changed = true; }
     }
 
-    // Productos — tomar Firebase solo si local está vacío
-    if(data.emj_prods && Array.isArray(data.emj_prods)){
-      if(!prods.length){ prods = data.emj_prods; saveP(); changed = true; }
+    // Productos — solo si local está vacío
+    if(data.emj_prods && Array.isArray(data.emj_prods) && !prods.length){
+      prods = data.emj_prods; saveP(); changed = true;
     }
 
     if(changed){
@@ -1706,10 +1716,6 @@ async function fbPull(){
     }
 
     syncDot('ok');
-
-    // Después del merge, subir el resultado combinado a Firebase
-    if(changed) setTimeout(()=>fbPush(), 1000);
-
     return changed;
   } catch(e){
     syncDot('err');

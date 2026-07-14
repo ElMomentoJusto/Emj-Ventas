@@ -1576,19 +1576,15 @@ let fbOnline = false;
 let fbSyncTimer = null;
 
 function setFbDot(state){
+  // Actualizar indicador en Config
   const dot = document.getElementById('fb-dot');
   const txt = document.getElementById('fb-status-txt');
-  if(!dot||!txt) return;
-  const states = {
-    ok:    {bg:'#5cb85c', t:'sincronizado'},
-    syn:   {bg:'#e8a020', t:'sincronizando...'},
-    err:   {bg:'#c0392b', t:'error de conexión'},
-    off:   {bg:'#555',    t:'no configurado'},
-  };
+  const states = {ok:{bg:'#5cb85c',t:'sincronizado'},syn:{bg:'#e8a020',t:'sincronizando...'},err:{bg:'#c0392b',t:'error de conexión'},off:{bg:'#555',t:'no configurado'},local:{bg:'#888',t:'guardado local'}};
   const s = states[state]||states.off;
-  dot.style.background = s.bg;
-  txt.textContent = s.t;
-  fbOnline = state==='ok';
+  if(dot) dot.style.background = s.bg;
+  if(txt) txt.textContent = s.t;
+  // También actualizar el dot del header
+  syncDot(state);
 }
 
 function guardarFbConfig(){
@@ -1637,16 +1633,16 @@ async function fbPush(){
   try {
     const banner = document.getElementById('sync-banner');
     if(banner) banner.classList.add('show');
-    setFbDot('syn');
+    syncDot('syn');
     await fetch(`${fbUrl}/emj_data.json${auth}`, {
       method:'PUT',
       body: JSON.stringify(data),
       headers:{'Content-Type':'application/json'}
     });
-    setFbDot('ok');
+    syncDot('ok');
     if(banner) setTimeout(()=>banner.classList.remove('show'), 800);
   } catch(e){
-    setFbDot('err');
+    syncDot('err');
     const banner = document.getElementById('sync-banner');
     if(banner) banner.classList.remove('show');
   }
@@ -1812,7 +1808,9 @@ function importarDatos(input){
 
       st.style.color = 'var(--vc)';
       st.textContent = '✓ Importado: '+importados.join(', ');
-      toast('✓ Datos importados correctamente');
+      toast('✓ Datos importados — subiendo a Firebase...');
+      // Subir TODO a Firebase inmediatamente
+      fbPush().then(()=>toast('✓ Firebase actualizado — todos los dispositivos sincronizados'));
       input.value = '';
     } catch(err) {
       st.style.color = '#e74c3c';

@@ -1894,13 +1894,20 @@ function getDashData(){
   const porPago = {};
   ventas.forEach(v=>{ porPago[v.pago]=(porPago[v.pago]||0)+v.total; });
 
-  // Clientes del período
+  // Clientes del período — calculado desde ventas reales igual que el ranking
   const porCl = {};
-  clientesDB.forEach(c=>{
-    const hist = (c.historial||[]).filter(h=>h.fecha&&h.fecha.startsWith(prefix));
-    if(!hist.length) return;
-    porCl[c.nombre]={nombre:c.nombre,id:c.id,tipo:c.tipo,total:hist.reduce((s,h)=>s+(h.total||0),0),visitas:hist.length};
+  ventas.forEach(v=>{
+    const nombre = v.cliente || null;
+    if(!nombre) return;
+    if(!porCl[nombre]){
+      const cl = clientesDB.find(c=>c.nombre===nombre);
+      porCl[nombre] = {nombre, id:cl?cl.id:'', tipo:cl?cl.tipo:'habitual', total:0, visitas:0, fechas:new Set()};
+    }
+    porCl[nombre].total += (v.total||0);
+    porCl[nombre].fechas.add(v.grupoTs||v.timestamp||v.fecha);
   });
+  // Convertir fechas a visitas
+  Object.values(porCl).forEach(c=>{ c.visitas = c.fechas.size; delete c.fechas; });
 
   // Eventos del período
   const evs = eventosHist.filter(e=>e.fecha&&e.fecha.startsWith(prefix));

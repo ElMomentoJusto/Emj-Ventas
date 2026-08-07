@@ -731,10 +731,10 @@ let editIdx = null, _editFecha = null, _editTs = null;
 const $ = id => document.getElementById(id);
 const fmt = n => '$'+Math.round(n).toLocaleString('es-AR');
 const hoy = () => { const d=new Date(); return new Date(d.getTime()-3*60*60*1000).toISOString().split('T')[0]; };
-const saveP = () => localStorage.setItem(KP, JSON.stringify(prods));
-const saveV = () => localStorage.setItem(KV, JSON.stringify(cache));
-const saveE = () => localStorage.setItem(KE, JSON.stringify(eventosHist));
-const saveCL = () => localStorage.setItem(KCL, JSON.stringify(clientesDB));
+const saveP = () => { localStorage.setItem(KP, JSON.stringify(prods)); if(typeof fbPush==='function') fbPush(); };
+const saveV = () => localStorage.setItem(KV, JSON.stringify(cache)); // ventas ya hace push manual
+const saveE = () => { localStorage.setItem(KE, JSON.stringify(eventosHist)); if(typeof fbPush==='function') fbPush(); };
+const saveCL = () => { localStorage.setItem(KCL, JSON.stringify(clientesDB)); if(typeof fbPush==='function') fbPush(); };
 const saveEvActual = () => {
   const nm = $('ev-nombre') ? $('ev-nombre').value : '';
   localStorage.setItem(KEV, JSON.stringify({personas:evPersonas, nombre:nm}));
@@ -1160,68 +1160,86 @@ function eliminarCliente(i){
 
 // ── RANKING ──────────────────────────────────────────────
 function renderRanking(ordenar){
-  const anio=new Date().getFullYear().toString();
-  const mesSel=document.getElementById('rank-mes-sel')?document.getElementById('rank-mes-sel').value:'todos';
-  const filtrando=mesSel!=='todos';
-  const prefix=anio+'-'+mesSel; // ej: 2026-05
-  $('rank-anio').textContent=filtrando?mesSel+'/'+anio:anio;
+  const anio = new Date().getFullYear().toString();
+  const mesSel = document.getElementById('rank-mes-sel') ? document.getElementById('rank-mes-sel').value : 'todos';
+  const filtrando = mesSel !== 'todos';
+  const prefix = anio + '-' + mesSel;
+  $('rank-anio').textContent = filtrando ? mesSel+'/'+anio : anio;
 
-  // Filtrar eventos por mes si corresponde
-  const datos=eventosHist.filter(e=>{
-    if(e.anio!==anio) return false;
-    if(filtrando) return e.fecha&&e.fecha.startsWith(prefix);
+  // Construir mapa desde las ventas reales del cache
+  const map = {};
+
+  // Recorrer todas las ventas del cache
+  Object.keys(cache).forEach(fecha=>{
+    if(fecha.substring(0,4) !== anio) return; // solo año actual
+    if(filtrando && !fecha.startsWith(prefix)) return; // filtro mes
+    (cache[fecha]||[]).forEach(v=>{
+      const nombre = v.cliente || null;
+      if(!nombre) return; // solo ventas vinculadas a cliente
+      if(!map[nombre]) map[nombre] = {nombre, id:'', tipo:'', visitas:0, total:0, prods:{}, fechas:new Set()};
+      map[nombre].total += (v.total||0);
+      map[nombre].prods[v.producto] = (map[nombre].prods[v.producto]||0) + (v.cantidad||1);
+      map[nombre].fechas.add(v.grupoTs||v.timestamp||fecha);
+    });
+  });
+
+  // Contar visitas por grupo de venta (no por ítem)
+  Object.values(map).forEach(c=>{ c.visitas = c.fechas.size; });
+
+  // Completar con datos de clientesDB (id, tipo)
+  clientesDB.forEach(c=>{
+    if(map[c.nombre]){
+      map[c.nombre].id = c.id || '';
+      map[c.nombre].tipo = c.tipo || '';
+    }
+  });
+
+  // Eventos del mes
+  const datos = eventosHist.filter(e=>{
+    if(e.anio !== anio) return false;
+    if(filtrando) return e.fecha && e.fecha.startsWith(prefix);
     return true;
   });
-
-  // Construir mapa de clientes combinando eventos + caja
-  const map={};
   datos.forEach(e=>{
-    if(!map[e.nombre])map[e.nombre]={nombre:e.nombre,id:'',tipo:'',visitas:0,total:0,prods:{}};
-    map[e.nombre].visitas++; map[e.nombre].total+=e.total;
-    (e.consumos||[]).forEach(c=>{map[e.nombre].prods[c.prod]=(map[e.nombre].prods[c.prod]||0)+c.cant;});
+    if(!map[e.nombre]) map[e.nombre] = {nombre:e.nombre, id:'', tipo:'', visitas:0, total:0, prods:{}, fechas:new Set()};
+    map[e.nombre].visitas++;
+    map[e.nombre].total += (e.total||0);
+    (e.consumos||[]).forEach(c=>{ map[e.nombre].prods[c.prod] = (map[e.nombre].prods[c.prod]||0) + c.cant; });
   });
 
-  // Datos de caja — filtrar historial por mes si corresponde
-  clientesDB.forEach(c=>{
-    const histFiltrado=filtrando
-      ?(c.historial||[]).filter(h=>h.fecha&&h.fecha.startsWith(prefix))
-      :(c.historial||[]);
-    const visitasMes=filtrando?histFiltrado.length:(c.visitas||0);
-    const totalMes=filtrando?histFiltrado.reduce((s,h)=>s+(h.total||0),0):(c.totalGastado||0);
-    if(!visitasMes&&!totalMes) return;
-    if(!map[c.nombre]) map[c.nombre]={nombre:c.nombre,id:c.id,tipo:c.tipo,visitas:0,total:0,prods:{}};
-    else{ map[c.nombre].id=c.id; map[c.nombre].tipo=c.tipo; }
-    map[c.nombre].visitas+=visitasMes;
-    map[c.nombre].total+=totalMes;
-    histFiltrado.forEach(h=>{map[c.nombre].prods[h.producto]=(map[c.nombre].prods[h.producto]||0)+1;});
-  });
+  const lista = Object.values(map)
+    .filter(c => c.total > 0 || c.visitas > 0)
+    .sort((a,b) => ordenar==='visitas' ? b.visitas-a.visitas : b.total-a.total)
+    .slice(0, 50);
 
-  const lista=Object.values(map).filter(c=>c.total>0||c.visitas>0)
-    .sort((a,b)=>ordenar==='visitas'?b.visitas-a.visitas:b.total-a.total)
-    .slice(0,50);
-  const totalG=lista.reduce((s,c)=>s+c.total,0);
-  const evUnicos=[...new Set(datos.map(e=>e.evento))].length;
+  const totalG = lista.reduce((s,c)=>s+c.total, 0);
+  const evUnicos = [...new Set(datos.map(e=>e.evento))].length;
 
-  $('rank-total-cl').textContent=clientesDB.length;
-  $('rank-total-$').textContent=fmt(totalG);
-  $('rank-ev').textContent=evUnicos;
+  $('rank-total-cl').textContent = clientesDB.length;
+  $('rank-total-$').textContent = fmt(totalG);
+  $('rank-ev').textContent = evUnicos;
 
-  const ico={habitual:'🟢',ocasional:'🔵',vip:'⭐'};
-  const el=$('rank-list'); el.innerHTML='';
-  if(!lista.length){el.innerHTML='<div class="empty">Sin datos aún.<br>Registrá clientes y vinculá ventas.</div>';return;}
+  const ico = {habitual:'🟢', ocasional:'🔵', vip:'⭐'};
+  const el = $('rank-list'); el.innerHTML = '';
+
+  if(!lista.length){
+    el.innerHTML = '<div class="empty">Sin ventas vinculadas a clientes en este período.<br>Seleccioná el cliente al registrar cada venta.</div>';
+    return;
+  }
+
   lista.forEach((c,i)=>{
-    const top3=Object.entries(c.prods||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
-    const top3html=top3.map(([p,n])=>'<span style="background:var(--bg3);border:1px solid var(--bv);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600;color:var(--vc)">'+p+' ×'+n+'</span>').join('');
-    const pct=totalG>0?Math.round(c.total/totalG*100):0;
-    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
-    const div=document.createElement('div');
-    div.style.cssText='background:var(--bg2);border:1px solid '+(i<3?'var(--bv)':'var(--bo)')+';border-radius:12px;margin:0 12px 10px;padding:13px 15px';
-    div.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+    const top3 = Object.entries(c.prods||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const top3html = top3.map(([p,n])=>'<span style="background:var(--bg3);border:1px solid var(--bv);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:600;color:var(--vc)">'+p+' ×'+n+'</span>').join('');
+    const pct = totalG>0 ? Math.round(c.total/totalG*100) : 0;
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1);
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--bg2);border:1px solid '+(i<3?'var(--bv)':'var(--bo)')+';border-radius:12px;margin:0 12px 10px;padding:13px 15px';
+    div.innerHTML = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
       +'<div style="font-size:20px">'+medal+'</div>'
       +(c.tipo?'<div style="font-size:16px">'+(ico[c.tipo]||'')+'</div>':'')
       +'<div style="flex:1"><div style="font-size:14px;font-weight:700">'+c.nombre
       +(c.id?' <span style="font-size:9px;color:var(--t2);font-family:monospace">'+c.id+'</span>':'')+'</div>'
-      +'<div style="font-size:10px;color:var(--t2);margin-top:2px">'+c.visitas+' visita'+(c.visitas>1?'s':'')+'</div></div>'
+      +'<div style="font-size:10px;color:var(--t2);margin-top:2px">'+c.visitas+' visita'+(c.visitas!==1?'s':'')+'</div></div>'
       +'<div style="font-family:Fraunces,serif;font-size:17px;font-weight:700;color:var(--vc)">'+fmt(c.total)+'</div></div>'
       +(top3html?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+top3html+'</div>':'')
       +'<div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%"></div></div>'

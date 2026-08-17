@@ -1171,20 +1171,20 @@ function renderRanking(ordenar){
 
   // Recorrer todas las ventas del cache
   Object.keys(cache).forEach(fecha=>{
-    if(fecha.substring(0,4) !== anio) return; // solo año actual
-    if(filtrando && !fecha.startsWith(prefix)) return; // filtro mes
+    if(fecha.substring(0,4) !== anio) return;
+    if(filtrando && !fecha.startsWith(prefix)) return;
     (cache[fecha]||[]).forEach(v=>{
       const nombre = v.cliente || null;
-      if(!nombre) return; // solo ventas vinculadas a cliente
-      if(!map[nombre]) map[nombre] = {nombre, id:'', tipo:'', visitas:0, total:0, prods:{}, fechas:new Set()};
+      if(!nombre) return;
+      if(!map[nombre]) map[nombre] = {nombre, id:'', tipo:'', total:0, prods:{}, grupos:new Set()};
       map[nombre].total += (v.total||0);
       map[nombre].prods[v.producto] = (map[nombre].prods[v.producto]||0) + (v.cantidad||1);
-      map[nombre].fechas.add(v.grupoTs||v.timestamp||fecha);
+      map[nombre].grupos.add(v.grupoTs || v.timestamp || fecha);
     });
   });
 
-  // Contar visitas por grupo de venta (no por ítem)
-  Object.values(map).forEach(c=>{ c.visitas = c.fechas.size; });
+  // Convertir grupos a visitas
+  Object.values(map).forEach(c=>{ c.visitas = c.grupos.size; delete c.grupos; });
 
   // Completar con datos de clientesDB (id, tipo)
   clientesDB.forEach(c=>{
@@ -1194,15 +1194,16 @@ function renderRanking(ordenar){
     }
   });
 
-  // Eventos del mes
+  // Eventos — usar fecha del evento para filtrar (no e.anio que puede estar vacío)
   const datos = eventosHist.filter(e=>{
-    if(e.anio !== anio) return false;
-    if(filtrando) return e.fecha && e.fecha.startsWith(prefix);
+    const fechaEv = e.fecha || '';
+    if(!fechaEv.startsWith(anio)) return false;
+    if(filtrando) return fechaEv.startsWith(prefix);
     return true;
   });
   datos.forEach(e=>{
-    if(!map[e.nombre]) map[e.nombre] = {nombre:e.nombre, id:'', tipo:'', visitas:0, total:0, prods:{}, fechas:new Set()};
-    map[e.nombre].visitas++;
+    if(!map[e.nombre]) map[e.nombre] = {nombre:e.nombre, id:'', tipo:'', visitas:0, total:0, prods:{}};
+    map[e.nombre].visitas = (map[e.nombre].visitas||0) + 1;
     map[e.nombre].total += (e.total||0);
     (e.consumos||[]).forEach(c=>{ map[e.nombre].prods[c.prod] = (map[e.nombre].prods[c.prod]||0) + c.cant; });
   });
@@ -1901,13 +1902,13 @@ function getDashData(){
     if(!nombre) return;
     if(!porCl[nombre]){
       const cl = clientesDB.find(c=>c.nombre===nombre);
-      porCl[nombre] = {nombre, id:cl?cl.id:'', tipo:cl?cl.tipo:'habitual', total:0, visitas:0, fechas:new Set()};
+      porCl[nombre] = {nombre, id:cl?cl.id:'', tipo:cl?cl.tipo:'habitual', total:0, grupos:new Set()};
     }
     porCl[nombre].total += (v.total||0);
-    porCl[nombre].fechas.add(v.grupoTs||v.timestamp||v.fecha);
+    porCl[nombre].grupos.add(v.grupoTs||v.timestamp||v.fecha);
   });
-  // Convertir fechas a visitas
-  Object.values(porCl).forEach(c=>{ c.visitas = c.fechas.size; delete c.fechas; });
+  // Convertir grupos a visitas
+  Object.values(porCl).forEach(c=>{ c.visitas = c.grupos.size; delete c.grupos; });
 
   // Eventos del período
   const evs = eventosHist.filter(e=>e.fecha&&e.fecha.startsWith(prefix));

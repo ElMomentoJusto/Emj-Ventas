@@ -382,7 +382,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div><div class="il">Nombre completo</div><input class="inp" id="ncl-nombre" placeholder="ej: Martín López"></div>
         <div><div class="il">Tipo</div><select class="inp" id="ncl-tipo" style="appearance:auto"><option value="habitual">🟢 Habitual</option><option value="ocasional">🔵 Ocasional</option><option value="vip">⭐ VIP</option></select></div>
       </div>
-      <div class="fg1"><div class="il">Notas</div><input class="inp" id="ncl-notas" placeholder="ej: viene los viernes, le gusta la IPA..."></div>
+      <div class="fg2">
+        <div><div class="il">📱 WhatsApp</div><input class="inp" id="ncl-tel" type="tel" placeholder="ej: 2984123456"></div>
+        <div><div class="il">Notas</div><input class="inp" id="ncl-notas" placeholder="ej: viene los viernes..."></div>
+      </div>
       <div style="background:var(--bg3);border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;color:var(--t2)">
         🪪 ID asignado: <span id="ncl-id-prev" style="color:var(--vc);font-weight:700;font-family:monospace;font-size:13px"></span>
       </div>
@@ -499,7 +502,10 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
       <div><div class="il">Nombre</div><input class="inp" id="mcl-nombre"></div>
       <div><div class="il">Tipo</div><select class="inp" id="mcl-tipo" style="appearance:auto"><option value="habitual">🟢 Habitual</option><option value="ocasional">🔵 Ocasional</option><option value="vip">⭐ VIP</option></select></div>
     </div>
-    <div class="fg1"><div class="il">Notas</div><input class="inp" id="mcl-notas"></div>
+    <div class="fg2">
+      <div><div class="il">📱 WhatsApp</div><input class="inp" id="mcl-tel" type="tel" placeholder="ej: 2984123456"></div>
+      <div><div class="il">Notas</div><input class="inp" id="mcl-notas"></div>
+    </div>
     <div class="mbtns">
       <button class="mb mbca" onclick="closeMo('mo-cl')">Cancelar</button>
       <button class="mb mbok" onclick="saveEditCliente()">Guardar</button>
@@ -919,11 +925,35 @@ async function registrarCarrito(){
   }
 
   toast('✓ Venta registrada — '+fmt(totalVenta));
+
+  // Botón WhatsApp si el cliente tiene teléfono
+  const clConTel = clSelActual ? clientesDB.find(c=>c.id===clSelActual.id) : null;
+  if(clConTel && clConTel.tel){
+    const tel = clConTel.tel.replace(/\D/g,'');
+    const lineas = carrito.map(i=>i.prod.icon+' '+i.prod.nombre+' ×'+i.cantidad+' → '+fmt(i.total)).join('\n');
+    const msg = encodeURIComponent(
+      '🍺 *El Momento Justo*\n'
+      +'_Comprobante de compra_\n\n'
+      +'📅 '+fecha+'\n'
+      +'👤 '+clConTel.nombre+'\n\n'
+      +lineas+'\n\n'
+      +'💳 Pago: '+pago+'\n'
+      +'💰 *Total: '+fmt(totalVenta)+'*\n\n'
+      +'¡Gracias por tu visita! 🍻'
+    );
+    // Mostrar botón flotante por 8 segundos
+    const btn = document.createElement('div');
+    btn.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;border-radius:28px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,.4);display:flex;align-items:center;gap:8px;white-space:nowrap';
+    btn.innerHTML='<span style="font-size:18px">📲</span> Enviar comprobante a '+clConTel.nombre;
+    btn.onclick=()=>{ window.open('https://wa.me/54'+tel+'?text='+msg,'_blank'); btn.remove(); };
+    document.body.appendChild(btn);
+    setTimeout(()=>{ if(btn.parentNode) btn.remove(); }, 8000);
+  }
+
   limpiarCarrito();
   clSelActual=null; selCliente(null);
   $('fnota').value='';
   renderVH(fecha); renderRes(fecha); updHdr(fecha);
-  // Subir a Firebase inmediatamente
   syncDot('syn');
   try{ await fbPush(); syncDot('ok'); } catch(e){ syncDot('err'); }
 }
@@ -1084,12 +1114,13 @@ function registrarCliente(){
   const nombre=($('ncl-nombre').value||'').trim();
   const tipo=$('ncl-tipo').value;
   const notas=($('ncl-notas').value||'').trim();
+  const tel=($('ncl-tel').value||'').replace(/\D/g,'');
   if(!nombre){toast('Ingresá el nombre','er');return;}
   if(clientesDB.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){toast('Ya existe ese nombre','er');return;}
   const id=nextID();
-  clientesDB.push({id,nombre,tipo,notas,fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[]});
+  clientesDB.push({id,nombre,tipo,notas,tel,fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[]});
   saveCL();
-  $('ncl-nombre').value=''; $('ncl-notas').value='';
+  $('ncl-nombre').value=''; $('ncl-notas').value=''; $('ncl-tel').value='';
   actualizarIdPrev(); renderBase(''); renderClDropList(''); renderSugerencias();
   toast('✓ '+nombre+' registrado como '+id);
   switchCS('base',$('cst-base'));
@@ -1131,6 +1162,7 @@ function editarCliente(i){
   $('mcl-nombre').value=c.nombre||'';
   $('mcl-tipo').value=c.tipo||'habitual';
   $('mcl-notas').value=c.notas||'';
+  $('mcl-tel').value=c.tel||'';
   $('mo-cl').classList.add('op');
 }
 function saveEditCliente(){
@@ -1140,6 +1172,7 @@ function saveEditCliente(){
   c.nombre=nm;
   c.tipo=$('mcl-tipo').value;
   c.notas=($('mcl-notas').value||'').trim();
+  c.tel=($('mcl-tel').value||'').replace(/\D/g,'');
   saveCL();
   closeMo('mo-cl');
   renderBase($('cl-base-q')?$('cl-base-q').value:'');

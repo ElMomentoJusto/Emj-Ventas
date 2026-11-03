@@ -228,6 +228,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 
 <div class="tabs">
   <div class="tb active" onclick="showTab('caja',this)">🍺 Caja</div>
+  <div class="tb" onclick="showTab('remitos',this)">📄 Remitos<span id="rem-badge" style="color:var(--amber)"></span></div>
   <div class="tb" onclick="showTab('hist',this)">📅 Historial</div>
   <div class="tb" onclick="showTab('eventos',this)">🎉 Eventos</div>
   <div class="tb" onclick="showTab('crm',this)">👥 Clientes</div>
@@ -290,6 +291,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
     <input type="text" class="ni" id="fnota" placeholder="Nota para toda la venta (opcional)...">
   </div>
   <div style="padding:0 12px"><button class="badd" id="badd" onclick="registrarCarrito()" disabled>✓ Registrar venta</button></div>
+  <div style="padding:8px 12px 0"><button id="btn-remito-cart" onclick="abrirRemitoCarrito()" disabled style="width:100%;background:var(--bg3);border:1px solid var(--bv);color:var(--vc);border-radius:var(--r12);padding:11px;font-size:13px;font-weight:700;cursor:pointer">📄 Generar remito (reventa)</button></div>
 
   <div class="sep"></div>
 
@@ -495,6 +497,76 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 </div>
 
 <!-- MODAL EDITAR CLIENTE -->
+<!-- ══ REMITOS PENDIENTES ══ -->
+<div id="tab-remitos" class="pg">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 12px 0">
+    <div style="background:var(--bg2);border:1px solid var(--bv);border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Pendiente de cobro</div>
+      <div id="rem-total" style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--amber)">$0</div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--bv);border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">Remitos</div>
+      <div id="rem-cant" style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:var(--vc)">0</div>
+    </div>
+  </div>
+  <div class="sl">Pendientes de cobro</div>
+  <div id="rem-lista"></div>
+  <div class="sl">Cobrados recientes</div>
+  <div id="rem-cobrados"></div>
+</div>
+
+<!-- MODAL COBRAR REMITO -->
+<div class="mo" id="mo-cobro" onclick="if(event.target===this)closeMo('mo-cobro')">
+  <div class="mbox">
+    <div class="mtit">💰 Cobrar remito</div>
+    <div id="mc-resumen" style="background:var(--bg3);border:1px solid var(--bo);border-radius:var(--r12);padding:10px 12px;font-size:12px;color:var(--t2);margin-bottom:12px"></div>
+    <div class="il">Forma de pago</div>
+    <div class="ggrid" id="mc-pagos" style="padding:0;margin-bottom:10px"></div>
+    <div id="mc-nota" style="font-size:11px;color:var(--t2);margin-bottom:6px"></div>
+    <div class="mbtns">
+      <button class="mb mbca" onclick="closeMo('mo-cobro')">Cancelar</button>
+      <button class="mb mbok" id="mc-ok" onclick="confirmarCobro()">Registrar cobro</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ANULAR REMITO -->
+<div class="mo" id="mo-anular" onclick="if(event.target===this)closeMo('mo-anular')">
+  <div class="mbox">
+    <div class="mtit">🗑 Anular remito</div>
+    <div id="ma-resumen" style="font-size:13px;color:var(--t);margin-bottom:6px"></div>
+    <div style="font-size:11px;color:var(--t2)">Se saca de la lista de pendientes. No se registra ninguna venta.</div>
+    <div class="mbtns">
+      <button class="mb mbca" onclick="closeMo('mo-anular')">Volver</button>
+      <button class="mb" style="background:#c0392b;color:#fff" onclick="confirmarAnular()">Anular</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REMITO -->
+<div class="mo" id="mo-remito" onclick="if(event.target===this)closeMo('mo-remito')">
+  <div class="mbox">
+    <div class="mtit">📄 Remito</div>
+    <div id="rm-resumen" style="background:var(--bg3);border:1px solid var(--bo);border-radius:var(--r12);padding:10px 12px;font-size:12px;color:var(--t2);margin-bottom:12px"></div>
+    <div class="fg1"><div class="il">Cliente / Razón social</div><input class="inp" id="rm-nombre" placeholder="ej: Almacén Don Pepe"></div>
+    <div class="fg2">
+      <div><div class="il">CUIT / DNI</div><input class="inp" id="rm-doc" placeholder="opcional"></div>
+      <div><div class="il">Domicilio</div><input class="inp" id="rm-dom" placeholder="opcional"></div>
+    </div>
+    <div class="fg1"><div class="il">Observaciones</div><input class="inp" id="rm-obs" placeholder="ej: entrega en local, 2 barriles..."></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);margin:4px 0 14px;cursor:pointer">
+      <input type="checkbox" id="rm-precios" checked style="width:18px;height:18px;accent-color:var(--vc)"> Mostrar precios y total en el remito
+    </label>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <button class="mb mbok" onclick="exportRemito('jpg')">⬇ JPG</button>
+      <button class="mb mbok" onclick="exportRemito('pdf')">📄 PDF</button>
+    </div>
+    <button class="mb" id="rm-pend" onclick="guardarRemitoPend()" style="display:none;width:100%;background:rgba(232,160,32,.15);color:var(--amber);border:1px solid rgba(232,160,32,.35);margin-bottom:8px">💾 Guardar como pendiente de cobro</button>
+    <button class="mb" id="rm-share" onclick="exportRemito('share')" style="display:none;width:100%;background:#25D366;color:#fff;margin-bottom:8px">📲 Compartir (WhatsApp, mail...)</button>
+    <button class="mb mbca" style="width:100%" onclick="closeMo('mo-remito')">Cerrar</button>
+  </div>
+</div>
+
 <div class="mo" id="mo-cl" onclick="if(event.target===this)closeMo('mo-cl')">
   <div class="mbox">
     <div class="mtit">✏️ Editar cliente</div>
@@ -705,6 +777,8 @@ const PDEF=[
 let prods = JSON.parse(localStorage.getItem(KP)||'null') || PDEF;
 let cache = JSON.parse(localStorage.getItem(KV)||'{}');
 let eventosHist = JSON.parse(localStorage.getItem(KE)||'[]');
+const KR = 'emj_remitos';
+let remitos = JSON.parse(localStorage.getItem(KR)||'[]'); // remitos pendientes/cobrados/anulados
 
 // clientesDB: array de objetos {id, nombre, tipo, notas, fechaAlta, visitas, totalGastado, historial[]}
 let clientesDB = (()=>{
@@ -741,6 +815,8 @@ const saveP = () => { localStorage.setItem(KP, JSON.stringify(prods)); if(typeof
 const saveV = () => localStorage.setItem(KV, JSON.stringify(cache)); // ventas ya hace push manual
 const saveE = () => { localStorage.setItem(KE, JSON.stringify(eventosHist)); if(typeof fbPush==='function') fbPush(); };
 const saveCL = () => { localStorage.setItem(KCL, JSON.stringify(clientesDB)); if(typeof fbPush==='function') fbPush(); };
+const saveRLocal = () => localStorage.setItem(KR, JSON.stringify(remitos));
+const saveR = () => { saveRLocal(); if(typeof fbPush==='function') fbPush(); };
 const saveEvActual = () => {
   const nm = $('ev-nombre') ? $('ev-nombre').value : '';
   localStorage.setItem(KEV, JSON.stringify({personas:evPersonas, nombre:nm}));
@@ -778,6 +854,7 @@ function showTab(id, el){
   if(id==='ranking') renderRanking('total');
   if(id==='eventos') { renderEvPGrid(); renderEvPersonas(); renderEvSelPersona(); renderEvResumen(); renderSugerencias(); }
   if(id==='prods') renderAdm();
+  if(id==='remitos') renderRemitos();
   if(id==='dashboard'){ initDashSelectors(); renderDash(); }
   if(id==='config'){
     const uInp=document.getElementById('fb-url-inp');
@@ -834,13 +911,16 @@ function agregarAlCarrito(){
 function renderCarrito(){
   const lista=$('carrito-lista'); if(!lista) return;
   const empty=$('carrito-empty');
+  const bRem=$('btn-remito-cart');
   if(!carrito.length){
     if(empty) empty.style.display='block';
     $('badd').disabled=true;
+    if(bRem) bRem.disabled=true;
     actualizarCartPreview(); return;
   }
   if(empty) empty.style.display='none';
   $('badd').disabled=false;
+  if(bRem) bRem.disabled=false;
   const items = carrito.map((item,i)=>`
     <div style="display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.03);gap:10px">
       <div style="font-size:18px;width:26px;text-align:center;flex-shrink:0">${item.prod.icon}</div>
@@ -1031,6 +1111,7 @@ function renderVH(fecha){
         </div>
         <div style="font-family:'Fraunces',serif;font-size:14px;font-weight:700;color:var(--vc);white-space:nowrap">${fmt(totalGrupo)}</div>
         <div style="display:flex;gap:3px;flex-shrink:0">
+          <button class="bsm be" style="padding:3px 6px;font-size:11px" data-f="${g.fecha}" data-g="${encodeURIComponent(g.grupoTs)}" onclick="abrirRemitoGrupoEl(this)">📄</button>
           <div class="vdel" data-f="${g.fecha}" data-ts="${encodeURIComponent(g.grupoTs)}" onclick="elimGrupo(this)">×</div>
         </div>
       </div>`;
@@ -1044,6 +1125,7 @@ function renderVH(fecha){
         </div>
         <div class="vit">${fmt(v.total)}</div>
         <div style="display:flex;gap:3px;flex-shrink:0">
+          <button class="bsm be" style="padding:3px 6px;font-size:11px" data-f="${g.fecha}" data-g="${encodeURIComponent(g.grupoTs)}" onclick="abrirRemitoGrupoEl(this)">📄</button>
           <button class="bsm be" style="padding:3px 6px;font-size:11px" data-f="${g.fecha}" data-ts="${encodeURIComponent(v.timestamp)}" onclick="openEditVentaEl(this)">✏️</button>
           <div class="vdel" data-f="${g.fecha}" data-ts="${encodeURIComponent(v.timestamp)}" onclick="elimVentaEl(this)">×</div>
         </div>
@@ -1679,6 +1761,7 @@ async function fbPush(){
     emj_clientes_db: clientesDB,
     emj_eventos_hist: eventosHist,
     emj_prods: prods,
+    emj_remitos: remitos,
     last_update: Date.now(),
     device: navigator.userAgent.substring(0,40),
   };
@@ -1758,9 +1841,22 @@ async function fbPull(){
       prods = data.emj_prods; saveP(); changed = true;
     }
 
+    // Remitos — merge por id; gana el registro con 'mod' más reciente (cobrado/anulado no se pisan)
+    if(Array.isArray(data.emj_remitos)){
+      let cambioR = false;
+      data.emj_remitos.forEach(rr=>{
+        if(!rr || !rr.id) return;
+        const lr = remitos.find(x=>x.id===rr.id);
+        if(!lr){ remitos.push(rr); cambioR = true; }
+        else if((rr.mod||0) > (lr.mod||0)){ Object.assign(lr, rr); cambioR = true; }
+      });
+      if(cambioR){ saveRLocal(); changed = true; }
+    }
+
     if(changed){
       renderPG(); renderGG(); renderAdm();
       cargarDia(); renderSugerencias();
+      renderRemitos();
     }
 
     syncDot('ok');
@@ -1793,518 +1889,404 @@ window.agregarVenta = async function(){
   if(fbUrl){ localStorage.setItem('emj_last_update', String(Date.now())); fbPush(); }
 };
 
-// ── BACKUP / IMPORTAR ─────────────────────────────────────
-function exportarDatos(){
-  const datos = {
-    version: 1,
-    exportado: new Date().toISOString(),
-    emj_prods:        JSON.parse(localStorage.getItem('emj_prods')||'null'),
-    emj_ventas:       JSON.parse(localStorage.getItem('emj_ventas')||'{}'),
-    emj_clientes_db:  JSON.parse(localStorage.getItem('emj_clientes_db')||'[]'),
-    emj_eventos_hist: JSON.parse(localStorage.getItem('emj_eventos_hist')||'[]'),
+// ── REMITO (reventa) ──────────────────────────────────────
+let _remito = null; // {items:[{nombre,cantidad,pu,total}], fecha, pago, nombre, obs}
+
+function fechaAR(f){ const p=(f||'').split('-'); return p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : (f||''); }
+
+function remitoNumero(fecha){
+  const n = new Date(new Date().getTime()-3*60*60*1000);
+  const hh = String(n.getUTCHours()).padStart(2,'0');
+  const mm = String(n.getUTCMinutes()).padStart(2,'0');
+  const ss = String(n.getUTCSeconds()).padStart(2,'0');
+  return 'R-'+(fecha||'').replace(/-/g,'')+'-'+hh+mm+ss;
+}
+
+function abrirRemitoCarrito(){
+  if(!carrito.length) return;
+  const cl = clSelActual ? clientesDB.find(c=>c.id===clSelActual.id) : null;
+  abrirRemito({
+    items: carrito.map(i=>({nombre:i.prod.nombre, icon:i.prod.icon, cantidad:i.cantidad, total:i.total, pu:i.cantidad ? i.total/i.cantidad : i.prod.precio})),
+    fecha: $('ffecha').value, pago: '', nombre: cl ? cl.nombre : '', obs: ($('fnota').value||'').trim(), origen: 'carrito'
+  });
+}
+
+function abrirRemitoGrupoEl(el){
+  const fecha = el.dataset.f, g = decodeURIComponent(el.dataset.g);
+  const vs = (cache[fecha]||[]).filter(v=>(v.grupoTs||v.timestamp)===g);
+  if(!vs.length) return;
+  abrirRemito({
+    items: vs.map(v=>({nombre:v.producto, icon:v.icon, cantidad:v.cantidad, total:v.total, pu:v.cantidad ? v.total/v.cantidad : v.precio})),
+    fecha: fecha, pago: vs[0].pago, nombre: vs[0].cliente || '', obs: vs[0].nota || '', origen: 'venta'
+  });
+}
+
+function abrirRemito(d){
+  d.nro = d.nro || remitoNumero(d.fecha);   // el nº queda fijo para todas las exportaciones de este remito
+  _remito = d;
+  const cl = d.nombre ? clientesDB.find(c=>c.nombre===d.nombre) : null;
+  $('rm-nombre').value = d.nombre || '';
+  $('rm-doc').value = d.doc || (cl && cl.doc ? cl.doc : '');
+  $('rm-dom').value = d.dom || (cl && cl.dom ? cl.dom : '');
+  $('rm-obs').value = d.obs || '';
+  $('rm-precios').checked = d.precios !== false;
+  const tot = d.items.reduce((s,i)=>s+i.total,0);
+  const un  = d.items.reduce((s,i)=>s+i.cantidad,0);
+  $('rm-resumen').innerHTML = d.items.length+' producto'+(d.items.length>1?'s':'')+' · '+un+' u. · <strong style="color:var(--vc)">'+fmt(tot)+'</strong> · '+fechaAR(d.fecha)+'<br>Nº '+d.nro;
+  $('rm-pend').style.display = d.origen==='carrito' ? 'block' : 'none';
+  $('rm-share').style.display = (navigator.share && navigator.canShare) ? 'block' : 'none';
+  $('mo-remito').classList.add('op');
+}
+
+function _rmWrap(ctx, texto, maxW){
+  const palabras = String(texto||'').split(/\s+/); const lineas = []; let actual = '';
+  palabras.forEach(w=>{
+    const prueba = actual ? actual+' '+w : w;
+    if(ctx.measureText(prueba).width > maxW && actual){ lineas.push(actual); actual = w; }
+    else actual = prueba;
+  });
+  if(actual) lineas.push(actual);
+  return lineas;
+}
+
+function _rmRect(ctx, x, y, w, h, r, fill, stroke){
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h);
+  if(fill){ ctx.fillStyle = fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+}
+
+function dibujarRemito(){
+  const d = _remito;
+  const nombre = $('rm-nombre').value.trim();
+  const doc = $('rm-doc').value.trim();
+  const dom = $('rm-dom').value.trim();
+  const obs = $('rm-obs').value.trim();
+  const precios = $('rm-precios').checked;
+  const items = d.items;
+  const W = 1240, M = 70, rowH = 62;
+  const H = Math.max(1754, 200 + 40 + 300 + 40 + 70 + items.length*rowH + 40 + 130 + 40 + 220 + 300 + 80);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const SANS = '"DM Sans", Arial, sans-serif', SERIF = 'Fraunces, Georgia, serif';
+
+  x.fillStyle = '#ffffff'; x.fillRect(0,0,W,H);
+
+  // Encabezado
+  x.fillStyle = '#1e5c28'; x.fillRect(0,0,W,200);
+  x.textAlign = 'left'; x.fillStyle = '#ffffff';
+  x.font = '700 56px '+SERIF; x.fillText('El Momento Justo', M, 80);
+  x.font = '400 26px '+SANS; x.fillStyle = 'rgba(255,255,255,.82)';
+  x.fillText('Cervecería Artesanal · Villa María, Córdoba', M, 124);
+  x.fillText('Independencia 740 · Tel. (353) 4267758', M, 164);
+  x.textAlign = 'right'; x.fillStyle = '#ffffff';
+  x.font = '700 54px '+SANS; x.fillText('REMITO', W-M, 90);
+  x.font = '400 26px '+SANS;
+  x.fillText('Nº '+(d.nro || remitoNumero(d.fecha)), W-M, 135);
+  x.fillText('Fecha: '+fechaAR(d.fecha), W-M, 170);
+  x.textAlign = 'left';
+
+  // Datos del cliente
+  let y = 240;
+  const conPago = precios && d.pago;
+  const boxH = conPago ? 300 : 250;
+  _rmRect(x, M, y, W-2*M, boxH, 16, '#f6f9f6', '#cfdccf');
+  x.fillStyle = '#5a7a5e'; x.font = '700 22px '+SANS; x.fillText('DATOS DEL CLIENTE', M+30, y+44);
+  x.fillStyle = '#1a1a1a';
+  const fila = (etq, val, yy) => {
+    x.font = '600 24px '+SANS; x.fillStyle = '#5a7a5e'; x.fillText(etq, M+30, yy);
+    x.font = '400 28px '+SANS; x.fillStyle = '#1a1a1a';
+    const l = _rmWrap(x, val || '—', W-2*M-290);
+    x.fillText(l[0] || '—', M+260, yy);
   };
-  const blob = new Blob([JSON.stringify(datos, null, 2)], {type:'application/json'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const fecha = new Date().toISOString().split('T')[0];
-  a.href = url;
-  a.download = 'EMJ_backup_'+fecha+'.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('✓ Backup descargado');
-}
+  fila('Cliente', nombre, y+98);
+  fila('CUIT / DNI', doc, y+156);
+  fila('Domicilio', dom, y+214);
+  if(conPago) fila('Forma de pago', d.pago, y+272);
+  y += boxH + 40;
 
-function importarDatos(input){
-  const file = input.files[0];
-  if(!file) return;
-  const st = document.getElementById('import-status');
-  st.textContent = '⏳ Leyendo archivo...';
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try {
-      const datos = JSON.parse(e.target.result);
-      // Validación básica
-      if(typeof datos !== 'object' || datos === null) throw new Error('Formato inválido');
+  // Tabla
+  const xCant = M+20, xDesc = M+170, xPU = W-M-250, xSub = W-M-24;
+  _rmRect(x, M, y, W-2*M, 64, 10, '#1e5c28');
+  x.fillStyle = '#ffffff'; x.font = '700 24px '+SANS;
+  x.textAlign = 'left'; x.fillText('CANT.', xCant, y+42); x.fillText('DESCRIPCIÓN', xDesc, y+42);
+  if(precios){ x.textAlign = 'right'; x.fillText('P. UNIT.', xPU, y+42); x.fillText('SUBTOTAL', xSub, y+42); }
+  x.textAlign = 'left';
+  y += 64;
 
-      let importados = [];
-
-      if(datos.emj_prods && Array.isArray(datos.emj_prods)){
-        localStorage.setItem('emj_prods', JSON.stringify(datos.emj_prods));
-        prods = datos.emj_prods;
-        importados.push(datos.emj_prods.length+' productos');
-      }
-      if(datos.emj_ventas && typeof datos.emj_ventas === 'object'){
-        localStorage.setItem('emj_ventas', JSON.stringify(datos.emj_ventas));
-        cache = datos.emj_ventas;
-        const dias = Object.keys(datos.emj_ventas).length;
-        importados.push(dias+' días de ventas');
-      }
-      if(datos.emj_clientes_db && Array.isArray(datos.emj_clientes_db)){
-        localStorage.setItem('emj_clientes_db', JSON.stringify(datos.emj_clientes_db));
-        clientesDB = datos.emj_clientes_db;
-        importados.push(datos.emj_clientes_db.length+' clientes');
-      }
-      if(datos.emj_eventos_hist && Array.isArray(datos.emj_eventos_hist)){
-        localStorage.setItem('emj_eventos_hist', JSON.stringify(datos.emj_eventos_hist));
-        eventosHist = datos.emj_eventos_hist;
-        importados.push(datos.emj_eventos_hist.length+' registros de eventos');
-      }
-
-      if(!importados.length) throw new Error('El archivo no contiene datos reconocibles');
-
-      // Refrescar toda la UI
-      renderPG(); renderGG(); renderAdm();
-      const f = document.getElementById('ffecha');
-      if(f) cargarDia();
-      renderSugerencias();
-
-      st.style.color = 'var(--vc)';
-      st.textContent = '✓ Importado: '+importados.join(', ');
-      toast('✓ Datos importados — subiendo a Firebase...');
-      // Subir TODO a Firebase inmediatamente
-      fbPush().then(()=>toast('✓ Firebase actualizado — todos los dispositivos sincronizados'));
-      input.value = '';
-    } catch(err) {
-      st.style.color = '#e74c3c';
-      st.textContent = '✗ Error: '+err.message;
-      toast('Error al importar: '+err.message, 'er');
+  let totalGral = 0, totalUn = 0;
+  items.forEach((it,i)=>{
+    if(i%2===1){ x.fillStyle = '#f6f9f6'; x.fillRect(M, y, W-2*M, rowH); }
+    x.fillStyle = '#1a1a1a'; x.font = '600 28px '+SANS;
+    const cant = it.cantidad%1===0 ? String(it.cantidad) : it.cantidad.toLocaleString('es-AR',{maximumFractionDigits:1});
+    x.textAlign = 'left'; x.fillText(cant, xCant, y+41);
+    x.font = '400 28px '+SANS;
+    const maxDesc = (precios ? xPU-330 : W-M-30) - xDesc;
+    let desc = it.nombre;
+    while(x.measureText(desc).width > maxDesc && desc.length > 3) desc = desc.slice(0,-2);
+    if(desc !== it.nombre) desc += '…';
+    x.fillText(desc, xDesc, y+41);
+    if(precios){
+      x.textAlign = 'right';
+      x.fillText(fmt(it.pu), xPU, y+41);
+      x.font = '600 28px '+SANS; x.fillText(fmt(it.total), xSub, y+41);
+      x.textAlign = 'left';
     }
-  };
-  reader.onerror = ()=>{ st.textContent='✗ No se pudo leer el archivo'; toast('Error de lectura','er'); };
-  reader.readAsText(file);
-}
-
-// ── DASHBOARD ─────────────────────────────────────────────
-
-function initDashSelectors(){
-  const anioSel = document.getElementById('dash-anio');
-  if(!anioSel) return;
-  const cur = new Date().getFullYear().toString();
-  const aniosCache = [...new Set(Object.keys(cache).map(f=>f.substring(0,4)).filter(a=>a.length===4))].sort((a,b)=>b-a);
-  const anios = aniosCache.includes(cur) ? aniosCache : [cur, ...aniosCache];
-  // Solo re-renderizar options si cambió
-  const curOpts = [...anioSel.options].map(o=>o.value);
-  if(JSON.stringify(curOpts) !== JSON.stringify(anios)){
-    anioSel.innerHTML = anios.map(a=>'<option value="'+a+'">'+a+'</option>').join('');
-  }
-  // Setear mes actual solo la primera vez (cuando no tiene valor)
-  const mesSel = document.getElementById('dash-mes');
-  if(mesSel && !mesSel.dataset.init){
-    const m = String(new Date().getMonth()+1).padStart(2,'0');
-    mesSel.value = m;
-    mesSel.dataset.init = '1';
-  }
-}
-
-function getDashData(){
-  const anioEl = document.getElementById('dash-anio');
-  const mesEl  = document.getElementById('dash-mes');
-  const anio = (anioEl && anioEl.value) ? anioEl.value : new Date().getFullYear().toString();
-  const mes  = (mesEl  && mesEl.value)  ? mesEl.value  : '00';
-  const prefix = mes==='00' ? anio : anio+'-'+mes;
-
-  // Filtrar ventas
-  const ventas = [];
-  Object.keys(cache).forEach(fecha=>{
-    if(!fecha.startsWith(prefix)) return;
-    (cache[fecha]||[]).forEach(v=>ventas.push({...v, fecha}));
+    x.strokeStyle = '#e3ebe3'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(M, y+rowH); x.lineTo(W-M, y+rowH); x.stroke();
+    totalGral += it.total; totalUn += it.cantidad;
+    y += rowH;
   });
 
-  // Agrupar por día
-  const porDia = {};
-  ventas.forEach(v=>{ porDia[v.fecha]=(porDia[v.fecha]||0)+v.total; });
+  // Total
+  y += 36;
+  if(precios){
+    _rmRect(x, W-M-460, y, 460, 110, 14, '#eef5ee', '#1e5c28');
+    x.fillStyle = '#5a7a5e'; x.font = '700 22px '+SANS; x.textAlign = 'left'; x.fillText('TOTAL', W-M-430, y+42);
+    x.fillStyle = '#1e5c28'; x.font = '700 50px '+SERIF; x.textAlign = 'right'; x.fillText(fmt(totalGral), W-M-28, y+86);
+  } else {
+    x.fillStyle = '#1a1a1a'; x.font = '700 30px '+SANS; x.textAlign = 'right';
+    x.fillText('Total de unidades: '+(totalUn%1===0 ? totalUn : totalUn.toLocaleString('es-AR',{maximumFractionDigits:1})), W-M-10, y+50);
+  }
+  x.textAlign = 'left';
+  y += 180;
 
-  // Por producto
-  const porProd = {};
-  ventas.forEach(v=>{
-    if(!porProd[v.producto]) porProd[v.producto]={nombre:v.producto,icon:v.icon||'🍺',cant:0,total:0,costo:0};
-    porProd[v.producto].cant  += v.cantidad;
-    porProd[v.producto].total += v.total;
-    const p = prods.find(x=>x.nombre===v.producto);
-    porProd[v.producto].costo += (p?p.costo:0)*v.cantidad;
+  // Observaciones
+  if(obs){
+    x.fillStyle = '#5a7a5e'; x.font = '700 22px '+SANS; x.fillText('OBSERVACIONES', M, y);
+    x.fillStyle = '#1a1a1a'; x.font = '400 26px '+SANS;
+    _rmWrap(x, obs, W-2*M).slice(0,4).forEach((l,i)=>{ x.fillText(l, M, y+42+i*36); });
+  }
+
+  // Firmas
+  const yF = H - 260;
+  x.strokeStyle = '#1a1a1a'; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(M, yF); x.lineTo(M+450, yF); x.stroke();
+  x.beginPath(); x.moveTo(W-M-450, yF); x.lineTo(W-M, yF); x.stroke();
+  x.fillStyle = '#1a1a1a'; x.font = '600 24px '+SANS; x.textAlign = 'center';
+  x.fillText('Entregó', M+225, yF+38);
+  x.fillText('Recibí conforme', W-M-225, yF+38);
+  x.font = '400 21px '+SANS; x.fillStyle = '#6b6b6b';
+  x.fillText('Firma y aclaración', M+225, yF+68);
+  x.fillText('Firma, aclaración y DNI', W-M-225, yF+68);
+
+  // Pie
+  x.fillStyle = '#9a9a9a'; x.font = '400 20px '+SANS;
+  x.fillText('Comprobante interno de entrega · No válido como factura', W/2, H-40);
+  x.textAlign = 'left';
+  return cv;
+}
+
+function exportRemito(modo){
+  if(!_remito) return;
+  const nombre = $('rm-nombre').value.trim();
+  if(!nombre){ toast('Ingresá el nombre del cliente','er'); return; }
+
+  // Recordar CUIT/domicilio en la ficha del cliente para la próxima vez
+  const cl = clientesDB.find(c=>(c.nombre||'').toLowerCase()===nombre.toLowerCase());
+  if(cl){
+    const doc = $('rm-doc').value.trim(), dom = $('rm-dom').value.trim();
+    if((doc && doc!==cl.doc) || (dom && dom!==cl.dom)){
+      if(doc) cl.doc = doc;
+      if(dom) cl.dom = dom;
+      saveCL();
+    }
+  }
+
+  const cv = dibujarRemito();
+  const base = 'Remito_'+nombre.replace(/[^\w\-]+/g,'_')+'_'+_remito.fecha;
+
+  if(modo==='pdf'){
+    const url = cv.toDataURL('image/jpeg',0.95);
+    const w = window.open('','_blank');
+    if(!w){ toast('Habilitá los popups para exportar el PDF','er'); return; }
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+base+'</title>'
+      +'<style>@page{size:A4;margin:0}html,body{margin:0;background:#fff}img{width:100%;display:block}</style></head>'
+      +'<body><img src="'+url+'" onload="setTimeout(function(){window.focus();window.print()},250)"></body></html>');
+    w.document.close();
+    return;
+  }
+
+  cv.toBlob(blob=>{
+    if(!blob){ toast('No se pudo generar el remito','er'); return; }
+    if(modo==='share'){
+      const file = new File([blob], base+'.jpg', {type:'image/jpeg'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        navigator.share({files:[file], title:'Remito El Momento Justo'}).catch(()=>{});
+      } else toast('Este navegador no permite compartir archivos, usá JPG','er');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = base+'.jpg';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+    toast('✓ Remito descargado');
+  }, 'image/jpeg', 0.95);
+}
+
+// ── REMITOS PENDIENTES DE COBRO ───────────────────────────
+const escH = s => String(s==null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtCant = n => n%1===0 ? String(n) : n.toLocaleString('es-AR',{maximumFractionDigits:1});
+let _cobrarId = null, _anularId = null, _pagoCobro = 'Efectivo', _procesando = false;
+
+async function guardarRemitoPend(){
+  const d = _remito;
+  if(!d || d.origen!=='carrito' || _procesando) return;
+  const nombre = $('rm-nombre').value.trim();
+  if(!nombre){ toast('Ingresá el nombre del cliente','er'); return; }
+  _procesando = true;
+  try{
+    try{ await fbPull(); }catch(e){}            // traer lo de otros dispositivos antes de escribir
+    const items = d.items.map(i=>({nombre:i.nombre, icon:i.icon||'🍺', cantidad:i.cantidad, pu:i.pu, total:i.total}));
+    const rec = {
+      id: 'rem_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      nro: d.nro, fecha: d.fecha, nombre,
+      doc: $('rm-doc').value.trim(), dom: $('rm-dom').value.trim(), obs: $('rm-obs').value.trim(),
+      precios: $('rm-precios').checked, items,
+      total: items.reduce((s,i)=>s+i.total,0),
+      estado: 'pendiente', creado: Date.now(), mod: Date.now()
+    };
+    remitos.push(rec);
+    // recordar CUIT/domicilio en la ficha (sin disparar otro push)
+    const cl = clientesDB.find(c=>(c.nombre||'').toLowerCase()===nombre.toLowerCase());
+    if(cl){ if(rec.doc) cl.doc = rec.doc; if(rec.dom) cl.dom = rec.dom; localStorage.setItem(KCL, JSON.stringify(clientesDB)); }
+    saveRLocal();
+    // el carrito ya quedó en el remito: se limpia para no registrarlo dos veces
+    limpiarCarrito(); clSelActual = null; selCliente(null); $('fnota').value = '';
+    closeMo('mo-remito');
+    renderRemitos();
+    toast('✓ Remito guardado como pendiente de cobro');
+    await fbPush();                              // un solo push con todo el estado
+  } finally { _procesando = false; }
+}
+
+function renderRemitos(){
+  const pend = remitos.filter(r=>r.estado==='pendiente').sort((a,b)=>(a.creado||0)-(b.creado||0));
+  const bd = $('rem-badge'); if(bd) bd.textContent = pend.length ? ' ('+pend.length+')' : '';
+  const el = $('rem-lista'); if(!el) return;
+  const tot = pend.reduce((s,r)=>s+(r.total||0),0);
+  $('rem-total').textContent = fmt(tot);
+  $('rem-cant').textContent = pend.length;
+
+  if(!pend.length){
+    el.innerHTML = '<div class="empty">No hay remitos pendientes de cobro.<br>Armá el carrito en la Caja, generá el remito y guardalo como pendiente.</div>';
+  } else {
+    el.innerHTML = pend.map(r=>{
+      const dias = Math.floor((Date.now()-(r.creado||Date.now()))/86400000);
+      const antig = dias<=0 ? 'hoy' : dias===1 ? 'ayer' : 'hace '+dias+' días';
+      const col = dias>=30 ? '#e74c3c' : dias>=15 ? 'var(--amber)' : 'var(--t2)';
+      const det = r.items.map(i=>escH(i.nombre)+' ×'+fmtCant(i.cantidad)).join(' · ');
+      return '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:14px;margin:0 12px 10px;padding:13px 15px;box-shadow:var(--sh2)">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
+        +'<div style="min-width:0"><div style="font-size:14px;font-weight:700;color:var(--t)">'+escH(r.nombre)+'</div>'
+        +'<div style="font-size:10px;color:var(--t2);margin-top:2px;font-family:monospace">'+escH(r.nro)+' · '+fechaAR(r.fecha)+'</div></div>'
+        +'<div style="text-align:right"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--amber)">'+fmt(r.total)+'</div>'
+        +'<div style="font-size:10px;color:'+col+';margin-top:2px">'+antig+'</div></div></div>'
+        +'<div style="font-size:11px;color:var(--t2);margin:8px 0 10px;line-height:1.5">'+det+'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button class="badd" style="flex:2;padding:10px;font-size:13px" onclick="abrirCobro(\''+r.id+'\')">💰 Cobrar</button>'
+        +'<button class="bsm be" style="flex:1;padding:10px" onclick="abrirRemitoPend(\''+r.id+'\')">📄 Remito</button>'
+        +'<button class="bsm bd" style="padding:10px" onclick="abrirAnular(\''+r.id+'\')">🗑</button>'
+        +'</div></div>';
+    }).join('');
+  }
+
+  const cob = remitos.filter(r=>r.estado==='cobrado').sort((a,b)=>(b.mod||0)-(a.mod||0)).slice(0,10);
+  const ec = $('rem-cobrados'); if(!ec) return;
+  ec.innerHTML = cob.length ? cob.map(r=>
+    '<div style="display:flex;align-items:center;gap:10px;margin:0 12px 6px;padding:10px 14px;background:var(--bg2);border:1px solid var(--bo);border-radius:12px">'
+    +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;color:var(--t)">'+escH(r.nombre)+'</div>'
+    +'<div style="font-size:10px;color:var(--t2);margin-top:2px">Cobrado '+fechaAR(r.cobradoFecha)+' · '+escH(r.pago||'')+'</div></div>'
+    +'<div style="font-family:Fraunces,serif;font-size:14px;font-weight:700;color:var(--vc)">'+fmt(r.total)+'</div>'
+    +'<button class="bsm be" style="padding:6px 9px" onclick="abrirRemitoPend(\''+r.id+'\')">📄</button></div>'
+  ).join('') : '<div class="empty" style="padding:14px">Todavía no hay remitos cobrados.</div>';
+}
+
+function abrirRemitoPend(id){
+  const r = remitos.find(x=>x.id===id); if(!r) return;
+  abrirRemito({
+    items: r.items.map(i=>({nombre:i.nombre, icon:i.icon, cantidad:i.cantidad, total:i.total, pu:i.pu})),
+    fecha: r.fecha, pago: r.estado==='cobrado' ? (r.pago||'') : '',
+    nombre: r.nombre, obs: r.obs||'', doc: r.doc||'', dom: r.dom||'', precios: r.precios!==false,
+    nro: r.nro, origen: 'pend'
   });
-
-  // Por pago
-  const porPago = {};
-  ventas.forEach(v=>{ porPago[v.pago]=(porPago[v.pago]||0)+v.total; });
-
-  // Clientes del período — calculado desde ventas reales igual que el ranking
-  const porCl = {};
-  ventas.forEach(v=>{
-    const nombre = v.cliente || null;
-    if(!nombre) return;
-    if(!porCl[nombre]){
-      const cl = clientesDB.find(c=>c.nombre===nombre);
-      porCl[nombre] = {nombre, id:cl?cl.id:'', tipo:cl?cl.tipo:'habitual', total:0, grupos:new Set()};
-    }
-    porCl[nombre].total += (v.total||0);
-    porCl[nombre].grupos.add(v.grupoTs||v.timestamp||v.fecha);
-  });
-  // Convertir grupos a visitas
-  Object.values(porCl).forEach(c=>{ c.visitas = c.grupos.size; delete c.grupos; });
-
-  // Eventos del período
-  const evs = eventosHist.filter(e=>e.fecha&&e.fecha.startsWith(prefix));
-
-  // Totales
-  const totalVentas = ventas.reduce((s,v)=>s+v.total,0);
-  const totalCosto  = Object.values(porProd).reduce((s,p)=>s+p.costo,0);
-  const numVentas   = ventas.length;
-  const numDias     = Object.keys(porDia).length;
-  const ticket      = numVentas ? totalVentas/numVentas : 0;
-  const ganancia    = totalVentas - totalCosto;
-  const margen      = totalVentas ? (ganancia/totalVentas)*100 : 0;
-
-  return {anio,mes,prefix,ventas,porDia,porProd,porPago,porCl,evs,
-          totalVentas,totalCosto,numVentas,numDias,ticket,ganancia,margen};
 }
 
-function renderDash(){
-  const d = getDashData();
-
-  // ── KPIs ──
-  const kpis = document.getElementById('dash-kpis');
-  if(kpis) kpis.innerHTML = [
-    {lbl:'Facturación',val:fmt(d.totalVentas),col:'var(--vc)'},
-    {lbl:'Ganancia neta',val:fmt(d.ganancia),col:d.ganancia>=0?'var(--vc)':'#e74c3c'},
-    {lbl:'Ventas',val:d.numVentas,col:'var(--vc)'},
-    {lbl:'Días activos',val:d.numDias,col:'var(--vc)'},
-  ].map(k=>`<div style="background:var(--bg2);border:1px solid var(--bv);border-radius:12px;padding:13px 12px;text-align:center">
-    <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">${k.lbl}</div>
-    <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:700;color:${k.col}">${k.val}</div>
-  </div>`).join('');
-
-  // ── RENTABILIDAD ──
-  const rent = document.getElementById('dash-rent');
-  if(rent) rent.innerHTML = [
-    {lbl:'Ingresos',val:fmt(d.totalVentas),col:'var(--vc)'},
-    {lbl:'Costos',val:fmt(d.totalCosto),col:'#e74c3c'},
-    {lbl:'Margen',val:Math.round(d.margen)+'%',col:d.margen>=40?'var(--vc)':d.margen>=20?'#ffd700':'#e74c3c'},
-  ].map(k=>`<div style="background:var(--bg2);border:1px solid var(--bv);border-radius:12px;padding:12px;text-align:center">
-    <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">${k.lbl}</div>
-    <div style="font-family:'Fraunces',serif;font-size:17px;font-weight:700;color:${k.col}">${k.val}</div>
-  </div>`).join('');
-
-  // ── GRÁFICO DÍAS ──
-  const chartEl = document.getElementById('dash-chart-ventas');
-  if(chartEl){
-    const dias = Object.keys(d.porDia).sort();
-    if(!dias.length){ chartEl.innerHTML='<div class="empty">Sin datos</div>'; }
-    else {
-      const maxVal = Math.max(...dias.map(f=>d.porDia[f]));
-      const W = Math.max(dias.length*34, 300);
-      const H = 110;
-      const bars = dias.map((f,i)=>{
-        const v = d.porDia[f];
-        const bh = Math.round((v/maxVal)*(H-30));
-        const x = i*34+4;
-        const y = H-bh-22;
-        const label = f.substring(8); // día del mes
-        const valStr = v>=1000?Math.round(v/1000)+'k':Math.round(v);
-        return `<rect x="${x}" y="${y}" width="26" height="${bh}" rx="5" fill="rgba(76,175,80,0.7)"/>
-<text x="${x+13}" y="${y-4}" text-anchor="middle" font-size="8" fill="#7a9c7e">${valStr}</text>
-<text x="${x+13}" y="${H-4}" text-anchor="middle" font-size="8" fill="#3d5440">${label}</text>`;
-      }).join('');
-      chartEl.innerHTML=`<svg width="${W}" height="${H}" style="display:block">${bars}</svg>`;
-    }
-  }
-
-  // ── FORMAS DE PAGO ──
-  const pagosEl = document.getElementById('dash-pagos');
-  if(pagosEl){
-    const total = Object.values(d.porPago).reduce((s,v)=>s+v,0)||1;
-    const colores={'Efectivo':'#4caf50','Transferencia':'#64b5f6','Tarjeta':'#ffd700','Mercado Pago':'#90caf9'};
-    const items = Object.entries(d.porPago).sort((a,b)=>b[1]-a[1]);
-    if(!items.length){ pagosEl.innerHTML='<div class="empty">Sin datos</div>'; }
-    else {
-      pagosEl.innerHTML = items.map(([pg,v])=>{
-        const pct = Math.round(v/total*100);
-        const col = colores[pg]||'#7a9c7e';
-        return `<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:12px;font-weight:700;color:var(--t)">${pg}</span>
-            <span style="font-size:12px;color:${col};font-weight:700">${fmt(v)} <span style="font-size:10px;color:var(--t2)">(${pct}%)</span></span>
-          </div>
-          <div style="height:7px;background:var(--bg3);border-radius:4px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${col};border-radius:4px"></div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // ── TOP PRODUCTOS ──
-  const topProdsEl = document.getElementById('dash-top-prods');
-  if(topProdsEl){
-    const lista = Object.values(d.porProd).sort((a,b)=>b.total-a.total).slice(0,10);
-    if(!lista.length){ topProdsEl.innerHTML='<div class="empty">Sin datos</div>'; }
-    else {
-      const maxT = lista[0].total;
-      topProdsEl.innerHTML = lista.map((p,i)=>{
-        const pct = Math.round(p.total/maxT*100);
-        const mg  = p.costo?Math.round((p.total-p.costo)/p.total*100):null;
-        return `<div style="margin-bottom:11px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-size:14px">${p.icon}</span>
-            <span style="flex:1;font-size:12px;font-weight:700;color:var(--t)">${p.nombre}</span>
-            <span style="font-size:10px;color:var(--t2)">${p.cant} u.</span>
-            <span style="font-size:12px;font-weight:700;color:var(--vc)">${fmt(p.total)}</span>
-            ${mg!==null?`<span style="font-size:10px;color:${mg>=40?'var(--vc)':'#ffd700'};background:var(--bg3);border-radius:20px;padding:2px 7px">${mg}%</span>`:''}
-          </div>
-          <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:rgba(76,175,80,0.6);border-radius:3px"></div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // ── TOP CLIENTES ──
-  const topClEl = document.getElementById('dash-top-cl');
-  if(topClEl){
-    const ico={habitual:'🟢',ocasional:'🔵',vip:'⭐'};
-    const lista = Object.values(d.porCl).sort((a,b)=>b.total-a.total).slice(0,10);
-    if(!lista.length){ topClEl.innerHTML='<div class="empty">Sin clientes vinculados al período</div>'; }
-    else {
-      const maxT = lista[0].total;
-      topClEl.innerHTML = lista.map((c,i)=>{
-        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'·';
-        const pct = Math.round(c.total/maxT*100);
-        return `<div style="margin-bottom:11px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <span style="font-size:14px">${medal}</span>
-            <span style="font-size:13px">${ico[c.tipo]||'👤'}</span>
-            <span style="flex:1;font-size:12px;font-weight:700;color:var(--t)">${c.nombre} <span style="font-size:9px;color:var(--t2)">${c.id||''}</span></span>
-            <span style="font-size:10px;color:var(--t2)">${c.visitas} v.</span>
-            <span style="font-size:12px;font-weight:700;color:var(--vc)">${fmt(c.total)}</span>
-          </div>
-          <div style="height:5px;background:var(--bg3);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:rgba(76,175,80,0.4);border-radius:3px"></div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // ── INDICADORES ──
-  const opsEl = document.getElementById('dash-ops');
-  if(opsEl){
-    const promDia = d.numDias ? d.totalVentas/d.numDias : 0;
-    opsEl.innerHTML = [
-      {lbl:'Ticket promedio',val:fmt(d.ticket)},
-      {lbl:'Promedio por día',val:fmt(promDia)},
-      {lbl:'Unidades vendidas',val:Math.round(d.ventas.reduce((s,v)=>s+v.cantidad,0))},
-      {lbl:'Clientes activos',val:Object.keys(d.porCl).length},
-    ].map(k=>`<div style="background:var(--bg2);border:1px solid var(--bv);border-radius:12px;padding:12px;text-align:center">
-      <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">${k.lbl}</div>
-      <div style="font-family:'Fraunces',serif;font-size:18px;font-weight:700;color:var(--vc)">${k.val}</div>
-    </div>`).join('');
-  }
-
-  // ── EVENTOS ──
-  const evsEl = document.getElementById('dash-eventos');
-  if(evsEl){
-    if(!d.evs.length){ evsEl.innerHTML='<div class="empty">Sin eventos en el período</div>'; }
-    else {
-      const totalEvs = d.evs.reduce((s,e)=>s+(e.total||0),0);
-      const nomEvs = [...new Set(d.evs.map(e=>e.evento))];
-      evsEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div style="text-align:center"><div style="font-family:Fraunces,serif;font-size:20px;color:var(--vc)">${nomEvs.length}</div><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px">Eventos</div></div>
-        <div style="text-align:center"><div style="font-family:Fraunces,serif;font-size:20px;color:var(--vc)">${d.evs.length}</div><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px">Asistentes</div></div>
-        <div style="text-align:center"><div style="font-family:Fraunces,serif;font-size:16px;color:var(--vc)">${fmt(totalEvs)}</div><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px">Facturado</div></div>
-      </div>`
-      + nomEvs.slice(0,5).map(nom=>{
-        const partic = d.evs.filter(e=>e.evento===nom);
-        const totEv  = partic.reduce((s,e)=>s+(e.total||0),0);
-        return `<div style="border-top:1px solid var(--bo);padding:8px 0;display:flex;justify-content:space-between;align-items:center">
-          <div><div style="font-size:12px;font-weight:700">${nom}</div><div style="font-size:10px;color:var(--t2)">${partic.length} personas · ${partic[0]?.fecha||''}</div></div>
-          <div style="font-family:Fraunces,serif;font-size:14px;color:var(--vc)">${fmt(totEv)}</div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  // ── PROYECCIÓN ──
-  const proyEl = document.getElementById('dash-proyeccion');
-  if(proyEl){
-    if(d.mes==='00'||!d.numDias){ proyEl.innerHTML='<div style="font-size:12px;color:var(--t2)">Seleccioná un mes para ver proyección</div>'; }
-    else {
-      const anioN = parseInt(d.anio);
-      const mesN  = parseInt(d.mes);
-      const diasMes = new Date(anioN, mesN, 0).getDate();
-      const hoyNum = new Date().getDate();
-      const diasEfectivos = Math.min(hoyNum, diasMes);
-      const proyTotal = diasEfectivos > 0 ? (d.totalVentas / diasEfectivos) * diasMes : 0;
-      const proyGan   = diasEfectivos > 0 ? (d.ganancia   / diasEfectivos) * diasMes : 0;
-      const avance    = Math.round(diasEfectivos/diasMes*100);
-      proyEl.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-          <div style="text-align:center;background:var(--bg3);border-radius:10px;padding:10px">
-            <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Proyección ventas</div>
-            <div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--vc)">${fmt(proyTotal)}</div>
-          </div>
-          <div style="text-align:center;background:var(--bg3);border-radius:10px;padding:10px">
-            <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Proyección ganancia</div>
-            <div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:${proyGan>=0?'var(--vc)':'#e74c3c'}">${fmt(proyGan)}</div>
-          </div>
-        </div>
-        <div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-            <span style="font-size:11px;color:var(--t2)">Avance del mes</span>
-            <span style="font-size:11px;font-weight:700;color:var(--vc)">${avance}% (día ${diasEfectivos} de ${diasMes})</span>
-          </div>
-          <div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
-            <div style="height:100%;width:${avance}%;background:rgba(76,175,80,0.7);border-radius:4px"></div>
-          </div>
-        </div>`;
-    }
-  }
+function _renderPagosCobro(){
+  $('mc-pagos').innerHTML = ['Efectivo','Transferencia','Tarjeta','Mercado Pago']
+    .map(o=>'<div class="gbtn'+(_pagoCobro===o?' sel':'')+'" onclick="_pagoCobro=\''+o+'\';_renderPagosCobro()">'+o+'</div>').join('');
 }
 
-// ── EXPORT PDF ────────────────────────────────────────────
-function exportDashPDF(){
-  const d = getDashData();
-  const mesSel = document.getElementById('dash-mes');
-  const mesNom = mesSel ? mesSel.options[mesSel.selectedIndex].text : d.mes;
-  const titulo = 'Dashboard EMJ — '+mesNom+' '+d.anio;
-
-  // Proyección
-  let proyHTML = '';
-  if(d.mes!=='00'){
-    const anioN = parseInt(d.anio);
-    const mesN  = parseInt(d.mes);
-    const diasMes = new Date(anioN, mesN, 0).getDate();
-    const diasEf  = Math.min(new Date().getDate(), diasMes);
-    const pT = diasEf>0?(d.totalVentas/diasEf)*diasMes:0;
-    const pG = diasEf>0?(d.ganancia/diasEf)*diasMes:0;
-    proyHTML = `<div class="section">
-      <h2>Proyección Mensual</h2>
-      <div class="grid2">
-        <div class="card"><div class="lbl">Proy. Ventas</div><div class="val green">${fmt(pT)}</div></div>
-        <div class="card"><div class="lbl">Proy. Ganancia</div><div class="val ${pG>=0?'green':'red'}">${fmt(pG)}</div></div>
-      </div>
-    </div>`;
-  }
-
-  // Top productos tabla
-  const topP = Object.values(d.porProd).sort((a,b)=>b.total-a.total).slice(0,10);
-  const topProws = topP.map((p,i)=>{
-    const mg = p.costo?Math.round((p.total-p.costo)/p.total*100):'-';
-    return `<tr><td>${i+1}</td><td>${p.icon} ${p.nombre}</td><td>${Math.round(p.cant)}</td><td>${fmt(p.total)}</td><td>${mg!=='-'?mg+'%':'-'}</td></tr>`;
-  }).join('');
-
-  // Top clientes tabla
-  const topC = Object.values(d.porCl).sort((a,b)=>b.total-a.total).slice(0,10);
-  const topCrows = topC.map((c,i)=>`<tr><td>${i+1}</td><td>${c.nombre}</td><td>${c.id||'-'}</td><td>${c.visitas}</td><td>${fmt(c.total)}</td></tr>`).join('');
-
-  // Pagos tabla
-  const pagosRows = Object.entries(d.porPago).sort((a,b)=>b[1]-a[1])
-    .map(([pg,v])=>`<tr><td>${pg}</td><td>${fmt(v)}</td><td>${Math.round(v/d.totalVentas*100)||0}%</td></tr>`).join('');
-
-  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<title>${titulo}</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;background:#fff;font-size:12px;padding:28px 32px}
-  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #2d6a35}
-  .brand{font-size:26px;font-weight:800;color:#2d6a35;letter-spacing:-1px}
-  .subtitle{font-size:13px;color:#666;margin-top:3px}
-  .period{text-align:right;font-size:12px;color:#888}
-  h2{font-size:13px;font-weight:700;color:#2d6a35;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #e0e0e0}
-  .section{margin-bottom:22px}
-  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-  .card{border:1px solid #e0e0e0;border-radius:10px;padding:12px;text-align:center}
-  .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:5px}
-  .val{font-size:20px;font-weight:800;color:#2d6a35}
-  .val.red{color:#c0392b}
-  .val.small{font-size:15px}
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  th{background:#2d6a35;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
-  td{padding:7px 10px;border-bottom:1px solid #f0f0f0}
-  tr:last-child td{border-bottom:none}
-  tr:nth-child(even) td{background:#fafafa}
-  .footer{margin-top:28px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:10px;color:#aaa;display:flex;justify-content:space-between}
-  @media print{body{padding:16px}@page{margin:1cm;size:A4}}
-  .green{color:#2d6a35}
-</style></head><body>
-<div class="header">
-  <div><div class="brand">🍺 EMJ</div><div class="subtitle">Dashboard de Gestión</div></div>
-  <div class="period"><div style="font-size:18px;font-weight:700;color:#2d6a35">${mesNom} ${d.anio}</div><div>Generado: ${new Date().toLocaleDateString('es-AR')}</div></div>
-</div>
-
-<div class="section">
-  <h2>Resumen del Período</h2>
-  <div class="grid4">
-    <div class="card"><div class="lbl">Facturación</div><div class="val small">${fmt(d.totalVentas)}</div></div>
-    <div class="card"><div class="lbl">Ganancia Neta</div><div class="val small ${d.ganancia>=0?'green':'red'}">${fmt(d.ganancia)}</div></div>
-    <div class="card"><div class="lbl">Margen</div><div class="val">${Math.round(d.margen)}%</div></div>
-    <div class="card"><div class="lbl">Días Activos</div><div class="val">${d.numDias}</div></div>
-  </div>
-</div>
-
-<div class="section">
-  <h2>Indicadores Operativos</h2>
-  <div class="grid4">
-    <div class="card"><div class="lbl">Ventas Registradas</div><div class="val">${d.numVentas}</div></div>
-    <div class="card"><div class="lbl">Ticket Promedio</div><div class="val small">${fmt(d.ticket)}</div></div>
-    <div class="card"><div class="lbl">Prom. por Día</div><div class="val small">${fmt(d.numDias?d.totalVentas/d.numDias:0)}</div></div>
-    <div class="card"><div class="lbl">Clientes Activos</div><div class="val">${Object.keys(d.porCl).length}</div></div>
-  </div>
-</div>
-
-<div class="section">
-  <h2>Top 10 Productos</h2>
-  <table><thead><tr><th>#</th><th>Producto</th><th>Unidades</th><th>Total</th><th>Margen</th></tr></thead>
-  <tbody>${topProws||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Sin datos</td></tr>'}</tbody></table>
-</div>
-
-<div class="section">
-  <h2>Formas de Pago</h2>
-  <table><thead><tr><th>Método</th><th>Total</th><th>%</th></tr></thead>
-  <tbody>${pagosRows||'<tr><td colspan="3" style="text-align:center;color:#aaa;padding:16px">Sin datos</td></tr>'}</tbody></table>
-</div>
-
-<div class="section">
-  <h2>Top 10 Clientes del Período</h2>
-  <table><thead><tr><th>#</th><th>Cliente</th><th>ID</th><th>Visitas</th><th>Total</th></tr></thead>
-  <tbody>${topCrows||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:16px">Sin clientes vinculados</td></tr>'}</tbody></table>
-</div>
-
-${d.evs.length?`<div class="section">
-  <h2>Eventos</h2>
-  <div class="grid3">
-    <div class="card"><div class="lbl">Eventos</div><div class="val">${[...new Set(d.evs.map(e=>e.evento))].length}</div></div>
-    <div class="card"><div class="lbl">Asistentes</div><div class="val">${d.evs.length}</div></div>
-    <div class="card"><div class="lbl">Facturado</div><div class="val small">${fmt(d.evs.reduce((s,e)=>s+(e.total||0),0))}</div></div>
-  </div>
-</div>`:''}
-
-${proyHTML}
-
-<div class="footer">
-  <span>EMJ Caja — Sistema de gestión</span>
-  <span>Período: ${mesNom} ${d.anio} · ${d.numDias} días con ventas</span>
-</div>
-</body></html>`;
-
-  const win = window.open('','_blank','width=900,height=700');
-  if(!win){ toast('Habilitá los popups para exportar el PDF','er'); return; }
-  win.document.write(html);
-  win.document.close();
-  win.onload = ()=>{ setTimeout(()=>{ win.focus(); win.print(); }, 400); };
+function abrirCobro(id){
+  const r = remitos.find(x=>x.id===id); if(!r || r.estado!=='pendiente') return;
+  _cobrarId = id; _pagoCobro = 'Efectivo';
+  $('mc-resumen').innerHTML = '<strong style="color:var(--t)">'+escH(r.nombre)+'</strong> · '+escH(r.nro)+'<br>'
+    +r.items.length+' producto'+(r.items.length>1?'s':'')+' · <strong style="color:var(--amber)">'+fmt(r.total)+'</strong>';
+  $('mc-nota').textContent = 'La venta se registra hoy ('+fechaAR(hoy())+') y suma a la caja del día.';
+  $('mc-ok').disabled = false;
+  _renderPagosCobro();
+  $('mo-cobro').classList.add('op');
 }
 
-const fechaHoy=hoy();
-$('ffecha').value=fechaHoy;
-if(_evGuardado&&_evGuardado.nombre) $('ev-nombre').value=_evGuardado.nombre;
-renderPG(); renderGG(); renderCarrito(); cargarDia();
-const _rankMesSel=document.getElementById('rank-mes-sel');
-if(_rankMesSel){ const _hm=String(new Date().getMonth()+1).padStart(2,'0'); _rankMesSel.value=_hm; }
-sincronizar();
-setInterval(()=>sincronizar(false),60000);
-</script>
-</body>
-</html>
+async function confirmarCobro(){
+  if(_procesando) return;
+  _procesando = true; $('mc-ok').disabled = true;
+  try{
+    try{ await fbPull(); }catch(e){}            // evita cobrar dos veces si otro dispositivo ya lo hizo
+    const r = remitos.find(x=>x.id===_cobrarId);
+    if(!r || r.estado!=='pendiente'){
+      closeMo('mo-cobro'); renderRemitos();
+      toast('Este remito ya fue cobrado o anulado','er'); return;
+    }
+    const fecha = hoy();
+    const ts = new Date(new Date().getTime()-3*60*60*1000).toISOString();
+    const nota = 'Remito '+r.nro+(r.obs ? ' · '+r.obs : '');
+    if(!cache[fecha]) cache[fecha] = [];
+    r.items.forEach((it,idx)=>{
+      cache[fecha].push({
+        fecha, producto: it.nombre, icon: it.icon||'🍺', cantidad: it.cantidad, precio: it.pu, total: it.total,
+        pago: _pagoCobro, nota, timestamp: idx===0 ? ts : ts+'_'+idx, cliente: r.nombre, grupoTs: ts
+      });
+    });
+    saveV();
+    const cl = clientesDB.find(c=>(c.nombre||'').toLowerCase()===(r.nombre||'').toLowerCase());
+    if(cl){
+      cl.visitas = (cl.visitas||0)+1;
+      cl.totalGastado = (cl.totalGastado||0)+r.total;
+      if(!cl.historial) cl.historial = [];
+      cl.historial.unshift({fecha, productos: r.items.map(i=>i.nombre+' ×'+fmtCant(i.cantidad)).join(', '), total: r.total});
+      if(cl.historial.length>200) cl.historial = cl.historial.slice(0,200);
+      localStorage.setItem(KCL, JSON.stringify(clientesDB));
+    }
+    r.estado = 'cobrado'; r.cobradoFecha = fecha; r.pago = _pagoCobro; r.mod = Date.now();
+    saveRLocal();
+    closeMo('mo-cobro');
+    renderRemitos(); cargarDia();
+    toast('✓ Cobro registrado — '+fmt(r.total));
+    syncDot('syn');
+    await fbPush();                              // un solo push: venta + cliente + remito cobrado
+  } finally { _procesando = false; const b=$('mc-ok'); if(b) b.disabled=false; }
+}
 
+function abrirAnular(id){
+  const r = remitos.find(x=>x.id===id); if(!r || r.estado!=='pendiente') return;
+  _anularId = id;
+  $('ma-resumen').innerHTML = '¿Anular el remito de <strong>'+escH(r.nombre)+'</strong> por <strong>'+fmt(r.total)+'</strong>?';
+  $('mo-anular').classList.add('op');
+}
+
+async function confirmarAnular(){
+  if(_procesando) return;
+  _procesando = true;
+  try{
+    try{ await fbPull(); }catch(e){}
+    const r = remitos.find(x=>x.id===_anularId);
+    closeMo('mo-anular');
+    if(!r || r.estado!=='pendiente'){ renderRemitos(); toast('Este remito ya no está pendiente','er'); return; }
+    r.estado = 'anulado'; r.mod = Date.now();
+    saveRLocal(); renderRemitos(); toast('Remito anulado');
+    await fbPush();
+  } finally { _procesando = false; }
+}
+
+// ── BACKUP / IMPORTAR ─

@@ -520,6 +520,12 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
   <div class="mbox">
     <div class="mtit">💰 Cobrar remito</div>
     <div id="mc-resumen" style="background:var(--bg3);border:1px solid var(--bo);border-radius:var(--r12);padding:10px 12px;font-size:12px;color:var(--t2);margin-bottom:12px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+      <div class="il" style="margin:0">Monto a cobrar ($)</div>
+      <div onclick="cobroSaldoCompleto()" style="font-size:11px;color:var(--vc);cursor:pointer;font-weight:700">usar saldo completo</div>
+    </div>
+    <input class="inp" id="mc-monto" type="number" inputmode="decimal" min="0" oninput="actualizarQueda()" style="font-size:18px;font-weight:700;margin-bottom:6px">
+    <div id="mc-queda" style="font-size:12px;margin-bottom:12px;min-height:16px"></div>
     <div class="il">Forma de pago</div>
     <div class="ggrid" id="mc-pagos" style="padding:0;margin-bottom:10px"></div>
     <div id="mc-nota" style="font-size:11px;color:var(--t2);margin-bottom:6px"></div>
@@ -1294,7 +1300,7 @@ function renderRanking(ordenar){
       if(!map[nombre]) map[nombre] = {nombre, id:'', tipo:'', total:0, prods:{}, grupos:new Set()};
       map[nombre].total += (v.total||0);
       map[nombre].prods[v.producto] = (map[nombre].prods[v.producto]||0) + (v.cantidad||1);
-      map[nombre].grupos.add(v.grupoTs || v.timestamp || fecha);
+      map[nombre].grupos.add(v.remitoId || v.grupoTs || v.timestamp || fecha);
     });
   });
 
@@ -2164,7 +2170,7 @@ function renderRemitos(){
   const pend = remitos.filter(r=>r.estado==='pendiente').sort((a,b)=>(a.creado||0)-(b.creado||0));
   const bd = $('rem-badge'); if(bd) bd.textContent = pend.length ? ' ('+pend.length+')' : '';
   const el = $('rem-lista'); if(!el) return;
-  const tot = pend.reduce((s,r)=>s+(r.total||0),0);
+  const tot = pend.reduce((sum,r)=>sum+saldoRemito(r),0);
   $('rem-total').textContent = fmt(tot);
   $('rem-cant').textContent = pend.length;
 
@@ -2176,13 +2182,20 @@ function renderRemitos(){
       const antig = dias<=0 ? 'hoy' : dias===1 ? 'ayer' : 'hace '+dias+' días';
       const col = dias>=30 ? '#e74c3c' : dias>=15 ? 'var(--amber)' : 'var(--t2)';
       const det = r.items.map(i=>escH(i.nombre)+' ×'+fmtCant(i.cantidad)).join(' · ');
+      const saldo = saldoRemito(r), pagado = r.pagado||0;
+      const parcial = pagado>0
+        ? '<div style="font-size:11px;margin-top:8px;padding:7px 10px;background:rgba(232,160,32,.1);border:1px solid rgba(232,160,32,.25);border-radius:8px;color:var(--t2);line-height:1.6">'
+          +'<strong style="color:var(--amber)">PARCIAL</strong> · Total '+fmt(r.total)+' · Cobrado <strong style="color:var(--vc)">'+fmt(pagado)+'</strong><br>'
+          +(r.pagos||[]).map(pg=>fechaAR(pg.fecha)+' '+fmt(pg.monto)+' ('+escH(pg.pago)+')').join(' · ')+'</div>'
+        : '';
       return '<div style="background:var(--bg2);border:1px solid var(--bo);border-radius:14px;margin:0 12px 10px;padding:13px 15px;box-shadow:var(--sh2)">'
         +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'
         +'<div style="min-width:0"><div style="font-size:14px;font-weight:700;color:var(--t)">'+escH(r.nombre)+'</div>'
         +'<div style="font-size:10px;color:var(--t2);margin-top:2px;font-family:monospace">'+escH(r.nro)+' · '+fechaAR(r.fecha)+'</div></div>'
-        +'<div style="text-align:right"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--amber)">'+fmt(r.total)+'</div>'
+        +'<div style="text-align:right"><div style="font-family:Fraunces,serif;font-size:18px;font-weight:700;color:var(--amber)">'+fmt(saldo)+'</div>'
         +'<div style="font-size:10px;color:'+col+';margin-top:2px">'+antig+'</div></div></div>'
-        +'<div style="font-size:11px;color:var(--t2);margin:8px 0 10px;line-height:1.5">'+det+'</div>'
+        +'<div style="font-size:11px;color:var(--t2);margin:8px 0 '+(pagado>0?'0':'10px')+';line-height:1.5">'+det+'</div>'
+        +parcial+(pagado>0?'<div style="height:10px"></div>':'')
         +'<div style="display:flex;gap:6px">'
         +'<button class="badd" style="flex:2;padding:10px;font-size:13px" onclick="abrirCobro(\''+r.id+'\')">💰 Cobrar</button>'
         +'<button class="bsm be" style="flex:1;padding:10px" onclick="abrirRemitoPend(\''+r.id+'\')">📄 Remito</button>'
@@ -2217,15 +2230,35 @@ function _renderPagosCobro(){
     .map(o=>'<div class="gbtn'+(_pagoCobro===o?' sel':'')+'" onclick="_pagoCobro=\''+o+'\';_renderPagosCobro()">'+o+'</div>').join('');
 }
 
+const round2 = n => Math.round(n*100)/100;
+const saldoRemito = r => r.items.reduce((sum,i)=>sum+(i.restTotal!=null ? i.restTotal : i.total),0);
+
 function abrirCobro(id){
-  const r = remitos.find(x=>x.id===id); if(!r || r.estado!=='pendiente') return;
+  const r = remitos.find(x=>x.id===id);
+  if(!r || r.estado!=='pendiente'){ _cobrarId = null; return; }
   _cobrarId = id; _pagoCobro = 'Efectivo';
+  const saldo = saldoRemito(r), pagado = r.pagado||0;
   $('mc-resumen').innerHTML = '<strong style="color:var(--t)">'+escH(r.nombre)+'</strong> · '+escH(r.nro)+'<br>'
-    +r.items.length+' producto'+(r.items.length>1?'s':'')+' · <strong style="color:var(--amber)">'+fmt(r.total)+'</strong>';
-  $('mc-nota').textContent = 'La venta se registra hoy ('+fechaAR(hoy())+') y suma a la caja del día.';
+    +'Total '+fmt(r.total)+(pagado>0 ? ' · Cobrado '+fmt(pagado) : '')+' · <strong style="color:var(--amber)">Saldo '+fmt(saldo)+'</strong>';
+  $('mc-monto').value = Math.round(saldo*100)/100;
+  $('mc-nota').textContent = 'Se registra hoy ('+fechaAR(hoy())+') y suma a la caja del día.';
   $('mc-ok').disabled = false;
-  _renderPagosCobro();
+  _renderPagosCobro(); actualizarQueda();
   $('mo-cobro').classList.add('op');
+}
+
+function cobroSaldoCompleto(){
+  const r = remitos.find(x=>x.id===_cobrarId); if(!r) return;
+  $('mc-monto').value = Math.round(saldoRemito(r)*100)/100; actualizarQueda();
+}
+
+function actualizarQueda(){
+  const r = remitos.find(x=>x.id===_cobrarId); const q = $('mc-queda'); if(!r || !q) return;
+  const saldo = saldoRemito(r), m = parseFloat($('mc-monto').value)||0;
+  if(m<=0) q.innerHTML = '<span style="color:var(--t3)">Ingresá el monto a cobrar</span>';
+  else if(m>saldo+0.5) q.innerHTML = '<span style="color:#e74c3c">El monto supera el saldo ('+fmt(saldo)+')</span>';
+  else if(m>=saldo-0.5) q.innerHTML = '<span style="color:var(--vc)">✓ Cobro total — el remito queda cobrado</span>';
+  else q.innerHTML = '<span style="color:var(--t2)">Cobro parcial — quedará un saldo de <strong style="color:var(--amber)">'+fmt(saldo-m)+'</strong></span>';
 }
 
 async function confirmarCobro(){
@@ -2238,40 +2271,77 @@ async function confirmarCobro(){
       closeMo('mo-cobro'); renderRemitos();
       toast('Este remito ya fue cobrado o anulado','er'); return;
     }
+    const saldo = saldoRemito(r);
+    let monto = parseFloat($('mc-monto').value);
+    if(!(monto>0)){ toast('Ingresá el monto a cobrar','er'); return; }
+    if(monto>saldo+0.5){ toast('El monto supera el saldo ('+fmt(saldo)+')','er'); return; }
+    const completo = monto>=saldo-0.5;
+    if(completo) monto = saldo;
+    const ratio = completo ? 1 : monto/saldo;
+
+    // Reparto proporcional del cobro entre los productos del remito (mantiene bien costos y ranking por producto)
+    const partes = r.items.map(it=>{
+      const rc = it.restCant!=null ? it.restCant : it.cantidad;
+      const rt = it.restTotal!=null ? it.restTotal : it.total;
+      return { it, rc, rt, qd: completo ? rc : round2(rc*ratio), td: completo ? rt : Math.round(rt*ratio) };
+    });
+    if(!completo){                                // las líneas deben sumar exactamente el monto cobrado
+      const diff = monto - partes.reduce((sum,x)=>sum+x.td,0);
+      if(Math.abs(diff)>0.001){ const mayor = partes.reduce((m,x)=>x.rt>m.rt?x:m, partes[0]); mayor.td = Math.max(0, mayor.td+diff); }
+    }
+
     const fecha = hoy();
     const ts = new Date(new Date().getTime()-3*60*60*1000).toISOString();
-    const nota = 'Remito '+r.nro+(r.obs ? ' · '+r.obs : '');
+    const primera = !(r.pagos && r.pagos.length);
+    const nota = 'Remito '+r.nro+(completo ? (primera ? '' : ' · saldo') : ' · cobro parcial')+(r.obs ? ' · '+r.obs : '');
     if(!cache[fecha]) cache[fecha] = [];
-    r.items.forEach((it,idx)=>{
+    let n = 0;
+    partes.forEach(x=>{
+      if(x.qd<=0 && x.td<=0) return;
       cache[fecha].push({
-        fecha, producto: it.nombre, icon: it.icon||'🍺', cantidad: it.cantidad, precio: it.pu, total: it.total,
-        pago: _pagoCobro, nota, timestamp: idx===0 ? ts : ts+'_'+idx, cliente: r.nombre, grupoTs: ts
+        fecha, producto: x.it.nombre, icon: x.it.icon||'🍺', cantidad: x.qd, precio: x.it.pu, total: x.td,
+        pago: _pagoCobro, nota, timestamp: n===0 ? ts : ts+'_'+n, cliente: r.nombre, grupoTs: ts, remitoId: r.id
       });
+      n++;
     });
     saveV();
+
+    partes.forEach(x=>{
+      x.it.restCant  = completo ? 0 : Math.max(0, round2(x.rc - x.qd));
+      x.it.restTotal = completo ? 0 : Math.max(0, x.rt - x.td);
+    });
+    r.pagado = round2((r.pagado||0) + monto);
+    if(!r.pagos) r.pagos = [];
+    r.pagos.push({fecha, monto, pago: _pagoCobro, ts});
+    r.mod = Date.now();
+    if(completo){ r.estado = 'cobrado'; r.cobradoFecha = fecha; r.pago = _pagoCobro; }
+
     const cl = clientesDB.find(c=>(c.nombre||'').toLowerCase()===(r.nombre||'').toLowerCase());
     if(cl){
-      cl.visitas = (cl.visitas||0)+1;
-      cl.totalGastado = (cl.totalGastado||0)+r.total;
+      if(primera) cl.visitas = (cl.visitas||0)+1;
+      cl.totalGastado = (cl.totalGastado||0)+monto;
       if(!cl.historial) cl.historial = [];
-      cl.historial.unshift({fecha, productos: r.items.map(i=>i.nombre+' ×'+fmtCant(i.cantidad)).join(', '), total: r.total});
+      cl.historial.unshift({fecha, productos: 'Remito '+r.nro+(completo ? '' : ' (parcial)'), total: monto});
       if(cl.historial.length>200) cl.historial = cl.historial.slice(0,200);
       localStorage.setItem(KCL, JSON.stringify(clientesDB));
     }
-    r.estado = 'cobrado'; r.cobradoFecha = fecha; r.pago = _pagoCobro; r.mod = Date.now();
     saveRLocal();
     closeMo('mo-cobro');
     renderRemitos(); cargarDia();
-    toast('✓ Cobro registrado — '+fmt(r.total));
+    toast(completo ? '✓ Cobro total registrado — '+fmt(monto) : '✓ Cobro parcial registrado — saldo '+fmt(saldoRemito(r)));
     syncDot('syn');
-    await fbPush();                              // un solo push: venta + cliente + remito cobrado
+    await fbPush();                              // un solo push: venta + cliente + remito
   } finally { _procesando = false; const b=$('mc-ok'); if(b) b.disabled=false; }
 }
 
 function abrirAnular(id){
-  const r = remitos.find(x=>x.id===id); if(!r || r.estado!=='pendiente') return;
+  const r = remitos.find(x=>x.id===id);
+  if(!r || r.estado!=='pendiente'){ _anularId = null; return; }
   _anularId = id;
-  $('ma-resumen').innerHTML = '¿Anular el remito de <strong>'+escH(r.nombre)+'</strong> por <strong>'+fmt(r.total)+'</strong>?';
+  const pag = r.pagado||0;
+  $('ma-resumen').innerHTML = pag>0
+    ? 'El remito de <strong>'+escH(r.nombre)+'</strong> ya tiene <strong>'+fmt(pag)+'</strong> cobrados (esas ventas quedan registradas). ¿Anular el saldo de <strong>'+fmt(saldoRemito(r))+'</strong>?'
+    : '¿Anular el remito de <strong>'+escH(r.nombre)+'</strong> por <strong>'+fmt(r.total)+'</strong>?';
   $('mo-anular').classList.add('op');
 }
 
@@ -2440,7 +2510,7 @@ function getDashData(){
       porCl[nombre] = {nombre, id:cl?cl.id:'', tipo:cl?cl.tipo:'habitual', total:0, grupos:new Set()};
     }
     porCl[nombre].total += (v.total||0);
-    porCl[nombre].grupos.add(v.grupoTs||v.timestamp||v.fecha);
+    porCl[nombre].grupos.add(v.remitoId||v.grupoTs||v.timestamp||v.fecha);
   });
   // Convertir grupos a visitas
   Object.values(porCl).forEach(c=>{ c.visitas = c.grupos.size; delete c.grupos; });

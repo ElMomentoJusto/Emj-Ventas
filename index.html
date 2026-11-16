@@ -374,6 +374,16 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         onfocus="this.style.borderColor='var(--vc)'" onblur="this.style.borderColor='var(--bo)'">
       <div style="font-size:10px;color:var(--t2);white-space:nowrap" id="cl-base-count">0 clientes</div>
     </div>
+    <div style="padding:0 12px 6px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;white-space:nowrap">Ordenar</div>
+      <select id="cl-base-orden" onchange="cambiarOrdenClientes()" style="flex:1;background:var(--bg3);border:1px solid var(--bv);color:var(--vc);border-radius:8px;padding:7px 8px;font-size:12px;font-weight:600;outline:none">
+        <option value="num_asc">Nº de cliente · antiguo → nuevo</option>
+        <option value="num_desc">Nº de cliente · nuevo → antiguo</option>
+        <option value="consumo">Mayor consumo (histórico)</option>
+        <option value="visitas">Más visitas</option>
+      </select>
+    </div>
+    <div id="cl-base-resumen" style="padding:0 14px 8px;font-size:10px;color:var(--t2)"></div>
     <div id="cl-base-list"></div>
   </div>
   <!-- NUEVO -->
@@ -481,6 +491,13 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
       <input type="file" accept=".json" onchange="importarDatos(this)" style="display:none">
     </label>
     <div id="import-status" style="margin-top:8px;font-size:11px;color:var(--t2);text-align:center;min-height:14px"></div>
+  </div>
+
+  <!-- PRECIOS -->
+  <div style="padding:14px 16px 0"><div style="font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding-bottom:8px;border-bottom:1px solid var(--bo)">💲 Unificar precios</div></div>
+  <div style="margin:10px 12px;background:var(--bg2);border:1px solid var(--bo);border-radius:var(--r16);padding:14px;box-shadow:var(--sh2)">
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px;line-height:1.5">Si los precios no coinciden entre dispositivos, tocá este botón <strong style="color:var(--t)">desde el dispositivo que tiene los precios correctos</strong>. Todos los demás se actualizan con ellos.</div>
+    <button class="badd" id="btn-unif-precios" onclick="usarMisPrecios()" style="background:rgba(232,160,32,.15);color:var(--amber);border:1px solid rgba(232,160,32,.35)">💲 Usar los precios de este dispositivo en todos</button>
   </div>
 
   <!-- INSTALAR -->
@@ -759,25 +776,6 @@ const PDEF=[
   {id:'agua',nombre:'Agua',precio:1000,costo:500,icon:'💧'},
 ];
 
-// ── SEED DATA — datos pre-cargados desde capturas ──────────
-(function(){
-  const KCL_seed = 'emj_clientes_db';
-  const KP_seed  = 'emj_prods';
-  const existing = JSON.parse(localStorage.getItem(KCL_seed)||'[]');
-  if(existing.length > 0) return; // ya tiene datos, no sobreescribir
-
-  const seedClientes = [{"id":"EMJ-001","nombre":"Damian Andrés","tipo":"habitual","notas":"Pinta - vino - Fernet","favoritos":["Pinta","Fernet","Picada"],"visitas":43,"totalGastado":240500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-002","nombre":"Martin Gassino","tipo":"habitual","notas":"Pinta - Vino - Fernet","favoritos":["Pinta","Vino Copa","Snack"],"visitas":19,"totalGastado":136500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-003","nombre":"Mariano Garello","tipo":"habitual","notas":"","favoritos":["Pinta","Snack","Che2 Mostos"],"visitas":9,"totalGastado":66000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-004","nombre":"David Glasberg","tipo":"habitual","notas":"","favoritos":["Pinta","Snack"],"visitas":20,"totalGastado":105000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-005","nombre":"Nico Diaz","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":9,"totalGastado":51000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-006","nombre":"Guido Orozco","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":12,"totalGastado":99000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-007","nombre":"Braian Fornero","tipo":"habitual","notas":"","favoritos":["Copón"],"visitas":11,"totalGastado":44000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-008","nombre":"Osvaldo Gribaudo","tipo":"habitual","notas":"Zorro","favoritos":["Pinta","Snack"],"visitas":16,"totalGastado":81000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-009","nombre":"Guillermo Inverti","tipo":"habitual","notas":"","favoritos":["Pinta","Snack","Growler"],"visitas":7,"totalGastado":43000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-010","nombre":"Josué Quiñones","tipo":"habitual","notas":"Pety","favoritos":["Pinta","Snack","Fernet"],"visitas":15,"totalGastado":77250,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-011","nombre":"Andrés Oternmin","tipo":"habitual","notas":"Sandia","favoritos":["Pinta"],"visitas":7,"totalGastado":33000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-012","nombre":"Manuel Lozada","tipo":"habitual","notas":"","favoritos":["Pinta","Snack"],"visitas":8,"totalGastado":43500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-013","nombre":"Franco Luque","tipo":"habitual","notas":"","favoritos":[],"visitas":0,"totalGastado":0,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-014","nombre":"Ariel Airaldi","tipo":"habitual","notas":"","favoritos":["Pinta","Snack","Che2 Mostos"],"visitas":12,"totalGastado":73500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-015","nombre":"Matías Palacios","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":12,"totalGastado":90000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-016","nombre":"Leandro Bruza","tipo":"habitual","notas":"","favoritos":["Vino Botella","Fernet"],"visitas":4,"totalGastado":43000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-017","nombre":"Darío Gassino","tipo":"habitual","notas":"","favoritos":["Snack","Pinta"],"visitas":2,"totalGastado":7500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-018","nombre":"Martin Flores","tipo":"habitual","notas":"","favoritos":["Pinta","Recarga"],"visitas":8,"totalGastado":49500,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-019","nombre":"Leandro Fernández","tipo":"habitual","notas":"","favoritos":["Caja vino x3"],"visitas":1,"totalGastado":60000,"fechaAlta":"2026-05-14","historial":[]},{"id":"EMJ-020","nombre":"Bruno Zernotti","tipo":"habitual","notas":"","favoritos":["Fernet","Pinta"],"visitas":8,"totalGastado":63000,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-021","nombre":"Juan Fluxa","tipo":"habitual","notas":"","favoritos":["Gaseosa chica","Pinta"],"visitas":2,"totalGastado":11500,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-022","nombre":"Misael Rosetto","tipo":"habitual","notas":"","favoritos":["Snack","Growler"],"visitas":2,"totalGastado":12900,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-023","nombre":"Maxi Bonfigli","tipo":"habitual","notas":"","favoritos":["Botella"],"visitas":2,"totalGastado":30000,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-024","nombre":"Julián Rodríguez","tipo":"habitual","notas":"Mono","favoritos":[],"visitas":0,"totalGastado":0,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-025","nombre":"Sebastián Fernández","tipo":"habitual","notas":"","favoritos":["Snack","Pinta","Growler"],"visitas":5,"totalGastado":51500,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-026","nombre":"Fernando Pipo","tipo":"habitual","notas":"","favoritos":["Pinta","Che2 Mostos","Snack"],"visitas":10,"totalGastado":76000,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-027","nombre":"Horario Calabacín","tipo":"habitual","notas":"","favoritos":["Pinta","Fernet","Che2 Mostos"],"visitas":10,"totalGastado":67000,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-028","nombre":"CF","tipo":"habitual","notas":"","favoritos":["Recarga","Growler","Vino Botella"],"visitas":15,"totalGastado":113300,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-029","nombre":"Ezequiel","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":6000,"fechaAlta":"2026-05-15","historial":[]},{"id":"EMJ-030","nombre":"Ignacio Rodríguez","tipo":"habitual","notas":"Nacho","favoritos":["Pinta"],"visitas":2,"totalGastado":6000,"fechaAlta":"2026-05-16","historial":[]},{"id":"EMJ-031","nombre":"Leo Pellex","tipo":"habitual","notas":"","favoritos":["Copón","Vino Botella","Growler"],"visitas":3,"totalGastado":25000,"fechaAlta":"2026-05-17","historial":[]},{"id":"EMJ-032","nombre":"Coco","tipo":"habitual","notas":"","favoritos":["Pinta","Snack"],"visitas":5,"totalGastado":15000,"fechaAlta":"2026-05-20","historial":[]},{"id":"EMJ-033","nombre":"Silvia","tipo":"habitual","notas":"","favoritos":["Che2 Mostos"],"visitas":1,"totalGastado":15000,"fechaAlta":"2026-05-21","historial":[]},{"id":"EMJ-034","nombre":"Mauri Bertello","tipo":"habitual","notas":"","favoritos":["Growler","Recarga"],"visitas":3,"totalGastado":28000,"fechaAlta":"2026-05-21","historial":[]},{"id":"EMJ-035","nombre":"Pablo Yañez","tipo":"habitual","notas":"","favoritos":["Snack","Pinta"],"visitas":2,"totalGastado":10500,"fechaAlta":"2026-05-22","historial":[]},{"id":"EMJ-036","nombre":"Infinity gim","tipo":"habitual","notas":"","favoritos":["Snack"],"visitas":1,"totalGastado":3000,"fechaAlta":"2026-05-23","historial":[]},{"id":"EMJ-037","nombre":"Anto Picco","tipo":"habitual","notas":"","favoritos":["Snack","Pinta"],"visitas":3,"totalGastado":10500,"fechaAlta":"2026-05-23","historial":[]},{"id":"EMJ-038","nombre":"Gaston Aissac","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":3000,"fechaAlta":"2026-05-23","historial":[]},{"id":"EMJ-039","nombre":"Alejo","tipo":"habitual","notas":"","favoritos":["Growler","Lata"],"visitas":3,"totalGastado":59000,"fechaAlta":"2026-05-23","historial":[]},{"id":"EMJ-040","nombre":"Marcela Rodríguez","tipo":"habitual","notas":"","favoritos":["Lata","Pinta"],"visitas":2,"totalGastado":17000,"fechaAlta":"2026-05-29","historial":[]},{"id":"EMJ-041","nombre":"Diego Bertello","tipo":"habitual","notas":"","favoritos":["Che2 Mostos","Botella"],"visitas":2,"totalGastado":12000,"fechaAlta":"2026-05-29","historial":[]},{"id":"EMJ-042","nombre":"Ariel Figueroa","tipo":"habitual","notas":"","favoritos":["Caja vino x3"],"visitas":1,"totalGastado":57000,"fechaAlta":"2026-05-30","historial":[]},{"id":"EMJ-043","nombre":"Melania allasia","tipo":"habitual","notas":"","favoritos":["Growler"],"visitas":1,"totalGastado":5500,"fechaAlta":"2026-05-30","historial":[]},{"id":"EMJ-044","nombre":"Ariel Gaudino","tipo":"habitual","notas":"","favoritos":["Recarga","Che2 Mostos"],"visitas":2,"totalGastado":14000,"fechaAlta":"2026-05-30","historial":[]},{"id":"sin-id-mica","nombre":"Mica","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":6000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-agus","nombre":"Agus Picco","tipo":"habitual","notas":"","favoritos":["Pinta","Snack","Vino Botella"],"visitas":1,"totalGastado":15500,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-vicky","nombre":"Vicky","tipo":"habitual","notas":"","favoritos":["Vino Botella","Fernet"],"visitas":1,"totalGastado":27000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-brenda","nombre":"Brenda","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":12000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-gina","nombre":"Gina","tipo":"habitual","notas":"","favoritos":["Vino Botella"],"visitas":1,"totalGastado":11000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-lali","nombre":"Lali","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":9000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-angie","nombre":"Angie","tipo":"habitual","notas":"","favoritos":["Gaseosa chica"],"visitas":1,"totalGastado":5000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-julian-mono","nombre":"Julián Mono","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":18000,"fechaAlta":"2026-05-01","historial":[]},{"id":"sin-id-negro","nombre":"Negro Invertí","tipo":"habitual","notas":"","favoritos":["Pinta"],"visitas":1,"totalGastado":6000,"fechaAlta":"2026-05-01","historial":[]}];
-
-  localStorage.setItem(KCL_seed, JSON.stringify(seedClientes));
-
-  // Solo setear productos default si tampoco tiene
-  const existingProds = JSON.parse(localStorage.getItem(KP_seed)||'null');
-  if(!existingProds){
-    const seedProds = [{"id":"pinta","nombre":"Pinta","precio":3000,"costo":1200,"icon":"🍺"},{"id":"fernet","nombre":"Fernet","precio":4500,"costo":1800,"icon":"🥃"},{"id":"vino-botella","nombre":"Vino Botella","precio":15000,"costo":6000,"icon":"🍷"},{"id":"vino-copa","nombre":"Vino Copa","precio":3500,"costo":1400,"icon":"🍷"},{"id":"growler","nombre":"Growler","precio":5500,"costo":2200,"icon":"🪣"},{"id":"recarga","nombre":"Recarga","precio":4500,"costo":1800,"icon":"🔄"},{"id":"snack","nombre":"Snack","precio":2500,"costo":800,"icon":"🍟"},{"id":"lata","nombre":"Lata","precio":3000,"costo":1200,"icon":"🥫"},{"id":"botella","nombre":"Botella","precio":6000,"costo":2400,"icon":"🍾"},{"id":"copón","nombre":"Copón","precio":4000,"costo":1600,"icon":"🏆"},{"id":"gaseosa-chica","nombre":"Gaseosa chica","precio":2500,"costo":600,"icon":"🥤"},{"id":"che2mostos","nombre":"Che2 Mostos","precio":5000,"costo":2000,"icon":"🍹"},{"id":"picada","nombre":"Picada","precio":8000,"costo":3000,"icon":"🧀"},{"id":"caja-vino","nombre":"Caja vino x3","precio":57000,"costo":30000,"icon":"📦"}];
-    localStorage.setItem(KP_seed, JSON.stringify(seedProds));
-  }
-})();
-// ── FIN SEED DATA ──────────────────────────────────────────
 
 // ── ESTADO GLOBAL ─────────────────────────────────────────
 let prods = JSON.parse(localStorage.getItem(KP)||'null') || PDEF;
@@ -811,7 +809,7 @@ let evSelPersona = null, evSelProd = null, evCant = 1;
 let sel = null, pago = 'Efectivo', cant = 1;
 let montoSobreescrito = null;
 let clSelActual = null;
-let editIdx = null, _editFecha = null, _editTs = null;
+let editIdx = null, _editFecha = null, _editTs = null, _editProdId = null, _editCliId = null;
 
 // ── UTILS ─────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -822,6 +820,14 @@ const saveV = () => localStorage.setItem(KV, JSON.stringify(cache)); // ventas y
 const saveE = () => { localStorage.setItem(KE, JSON.stringify(eventosHist)); if(typeof fbPush==='function') fbPush(); };
 const saveCL = () => { localStorage.setItem(KCL, JSON.stringify(clientesDB)); if(typeof fbPush==='function') fbPush(); };
 const saveRLocal = () => localStorage.setItem(KR, JSON.stringify(remitos));
+const savePLocal  = () => localStorage.setItem(KP, JSON.stringify(prods));
+const saveCLLocal = () => localStorage.setItem(KCL, JSON.stringify(clientesDB));
+const saveELocal  = () => localStorage.setItem(KE, JSON.stringify(eventosHist));
+// Borrados ("lápidas"): para que lo que se elimina en un dispositivo no vuelva desde otro
+const KT = 'emj_tomb';
+let tomb = {}; try{ tomb = JSON.parse(localStorage.getItem(KT)||'{}') || {}; }catch(e){ tomb = {}; }
+['ventas','clientes','prods'].forEach(k=>{ if(!tomb[k] || typeof tomb[k]!=='object') tomb[k] = {}; });
+const saveTomb = () => localStorage.setItem(KT, JSON.stringify(tomb));
 const saveR = () => { saveRLocal(); if(typeof fbPush==='function') fbPush(); };
 const saveEvActual = () => {
   const nm = $('ev-nombre') ? $('ev-nombre').value : '';
@@ -1060,8 +1066,9 @@ function vincularVenta(v){
 }
 
 async function elimVenta(fecha, ts){
+  markDel('ventas', ts);
   cache[fecha]=(cache[fecha]||[]).filter(v=>v.timestamp!==ts);
-  saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Eliminado');
+  saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Eliminado'); fbPush();
   if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'delete',timestamp:ts})}); }catch(e){}
 }
 function openEditVenta(fecha, ts){
@@ -1077,12 +1084,14 @@ function saveEditVenta(){
   v.precio=parseFloat($('eve-precio').value)||v.precio; v.total=v.cantidad*v.precio;
   v.pago=$('eve-pago').value; v.nota=$('eve-nota').value.trim();
   const p=prods.find(x=>x.nombre===v.producto); if(p) v.icon=p.icon;
-  saveV(); closeMo('mo-venta'); renderVH(_editFecha); renderRes(_editFecha); updHdr(_editFecha); toast('✓ Venta actualizada');
+  v.mod=Date.now();
+  saveV(); closeMo('mo-venta'); fbPush(); renderVH(_editFecha); renderRes(_editFecha); updHdr(_editFecha); toast('✓ Venta actualizada');
 }
 async function limpiarDia(){
   const fecha=$('ffecha').value; const vs=cache[fecha]||[];
   if(!vs.length) return; if(!confirm('¿Limpiar '+vs.length+' ventas?')) return;
-  delete cache[fecha]; saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Día limpiado');
+  vs.forEach(v=>{ if(v.timestamp) markDel('ventas', v.timestamp); });
+  delete cache[fecha]; saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Día limpiado'); fbPush();
   if(API) try{ await fetch(API,{method:'POST',body:JSON.stringify({action:'limpiarDia',fecha})}); }catch(e){}
 }
 
@@ -1143,8 +1152,9 @@ function renderVH(fecha){
 
 function elimGrupo(el){
   const fecha=el.dataset.f; const grupoTs=decodeURIComponent(el.dataset.ts);
+  (cache[fecha]||[]).filter(v=>(v.grupoTs||v.timestamp)===grupoTs).forEach(v=>{ if(v.timestamp) markDel('ventas', v.timestamp); });
   cache[fecha]=(cache[fecha]||[]).filter(v=>(v.grupoTs||v.timestamp)!==grupoTs);
-  saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Venta eliminada');
+  saveV(); renderVH(fecha); renderRes(fecha); updHdr(fecha); toast('Venta eliminada'); fbPush();
 }
 function openEditVentaEl(el){ openEditVenta(el.dataset.f, decodeURIComponent(el.dataset.ts)); }
 function elimVentaEl(el){ elimVenta(el.dataset.f, decodeURIComponent(el.dataset.ts)); }
@@ -1206,31 +1216,82 @@ function registrarCliente(){
   if(!nombre){toast('Ingresá el nombre','er');return;}
   if(clientesDB.find(c=>c.nombre.toLowerCase()===nombre.toLowerCase())){toast('Ya existe ese nombre','er');return;}
   const id=nextID();
-  clientesDB.push({id,nombre,tipo,notas,tel,fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[]});
+  clientesDB.push({id,nombre,tipo,notas,tel,fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[],modP:Date.now()});
   saveCL();
   $('ncl-nombre').value=''; $('ncl-notas').value=''; $('ncl-tel').value='';
   actualizarIdPrev(); renderBase(''); renderClDropList(''); renderSugerencias();
   toast('✓ '+nombre+' registrado como '+id);
   switchCS('base',$('cst-base'));
 }
+const _numCl = c => { const n = parseInt(String(c.id||'').replace(/\D/g,''),10); return isNaN(n) ? null : n; };
+
+function cambiarOrdenClientes(){
+  try{ localStorage.setItem('emj_cl_orden', $('cl-base-orden').value); }catch(e){}
+  renderBase($('cl-base-q') ? $('cl-base-q').value : '');
+}
+
 function renderBase(q){
-  const lista=q?clientesDB.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||c.id.toLowerCase().includes(q.toLowerCase())):clientesDB;
-  $('cl-base-count').textContent=lista.length+' clientes';
-  const el=$('cl-base-list');
+  const orden = ($('cl-base-orden') && $('cl-base-orden').value) || 'num_asc';
+  // Por número de cliente (numérico, no alfabético: EMJ-1000 va después de EMJ-999). Sin número → al final.
+  const porNum = dir => (a,b)=>{
+    const an=_numCl(a), bn=_numCl(b);
+    if(an===null && bn===null) return (a.fechaAlta||'').localeCompare(b.fechaAlta||'') || (a.nombre||'').localeCompare(b.nombre||'');
+    if(an===null) return 1;
+    if(bn===null) return -1;
+    return dir*(an-bn);
+  };
+  const cmp = orden==='num_desc' ? porNum(-1)
+    : orden==='consumo' ? (a,b)=>((b.totalGastado||0)-(a.totalGastado||0)) || ((b.visitas||0)-(a.visitas||0)) || porNum(1)(a,b)
+    : orden==='visitas' ? (a,b)=>((b.visitas||0)-(a.visitas||0)) || ((b.totalGastado||0)-(a.totalGastado||0)) || porNum(1)(a,b)
+    : porNum(1);
+  const modoRanking = orden==='consumo' || orden==='visitas';
+
+  const todos = [...clientesDB].sort(cmp);          // copia: no altera el orden guardado
+  const pos = {}; todos.forEach((c,i)=>{ pos[c.id]=i+1; });   // posición global, aunque se filtre por búsqueda
+  const ql = (q||'').toLowerCase();
+  const lista = ql ? todos.filter(c=>(c.nombre||'').toLowerCase().includes(ql)||(c.id||'').toLowerCase().includes(ql)) : todos;
+  const totalHist = clientesDB.reduce((sum,c)=>sum+(c.totalGastado||0),0);
+
+  $('cl-base-count').textContent = lista.length+' clientes';
+  $('cl-base-resumen').textContent = clientesDB.length+' clientes · Consumo histórico total: '+fmt(totalHist);
+  const el = $('cl-base-list');
   const ico={habitual:'🟢',ocasional:'🔵',vip:'⭐'};
   const bgCol={habitual:'rgba(76,175,80,.12)',ocasional:'rgba(100,181,246,.12)',vip:'rgba(255,215,0,.12)'};
   if(!lista.length){el.innerHTML='<div class="empty">Sin clientes.<br>Usá + Nuevo para agregar.</div>';return;}
   el.innerHTML='';
   lista.forEach(c=>{
     const realIdx=clientesDB.findIndex(x=>x.id===c.id);
-    const prods2={};(c.historial||[]).forEach(h=>{prods2[h.producto]=(prods2[h.producto]||0)+1;});
+    const prods2={};
+    (c.historial||[]).forEach(h=>{
+      if(h.producto){ prods2[h.producto]=(prods2[h.producto]||0)+1; }          // formato de eventos
+      else if(h.productos){                                                    // formato de ventas con carrito: "Pinta ×2, Snack ×1"
+        String(h.productos).split(', ').forEach(t=>{
+          const nm=t.replace(/\s*×.*$/,'').trim();
+          if(nm && !/^Remito /.test(nm)) prods2[nm]=(prods2[nm]||0)+1;
+        });
+      }
+    });
     const top3=Object.entries(prods2).sort((a,b)=>b[1]-a[1]).slice(0,3)
       .map(([p])=>'<span style="background:var(--bg3);border:1px solid var(--bv);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;color:var(--vc)">'+p+'</span>').join('');
+    // Posición (solo cuando se ordena por consumo o visitas)
+    let posHtml='', barra='';
+    if(modoRanking){
+      const n=pos[c.id], valor = orden==='consumo' ? (c.totalGastado||0) : (c.visitas||0);
+      const txt = valor<=0 ? '—' : n===1?'🥇':n===2?'🥈':n===3?'🥉':'#'+n;
+      posHtml='<div style="min-width:34px;text-align:center;font-size:'+(n<=3&&valor>0?'20':'13')+'px;font-weight:700;color:var(--t2);font-family:Fraunces,serif">'+txt+'</div>';
+      if(orden==='consumo'){
+        const raw = totalHist>0 ? (c.totalGastado||0)/totalHist*100 : 0;
+        const lbl = raw>=1 ? Math.round(raw)+'%' : raw>0 ? '<1%' : '0%';
+        barra='<div style="padding:0 14px 10px"><div class="prog-bar" style="margin-top:0"><div class="prog-fill" style="width:'+raw.toFixed(1)+'%"></div></div>'
+          +'<div style="font-size:10px;color:var(--t3);margin-top:4px">'+lbl+' del consumo histórico total</div></div>';
+      }
+    }
     const div=document.createElement('div'); div.className='cl-card';
     div.innerHTML='<div class="cl-top">'
+      +posHtml
       +'<div class="cl-av" style="background:'+(bgCol[c.tipo]||'var(--bg3)')+'">'+(ico[c.tipo]||'👤')+'</div>'
       +'<div style="flex:1;min-width:0"><div class="cl-nm">'+c.nombre+'</div>'
-      +'<div class="cl-id">'+c.id+' · <span class="badge '+(c.tipo==='habitual'?'bg-h':c.tipo==='vip'?'bg-v':'bg-o')+'">'+c.tipo+'</span>'+(c.notas?' · '+c.notas:'')+'</div></div>'
+      +'<div class="cl-id">'+(c.id||'')+' · <span class="badge '+(c.tipo==='habitual'?'bg-h':c.tipo==='vip'?'bg-v':'bg-o')+'">'+c.tipo+'</span>'+(c.notas?' · '+c.notas:'')+'</div></div>'
       +'<div style="display:flex;gap:4px">'
       +'<button class="bsm be" onclick="editarCliente('+realIdx+')">✏️</button>'
       +'<button class="bsm bd" onclick="eliminarCliente('+realIdx+')">×</button>'
@@ -1240,13 +1301,14 @@ function renderBase(q){
       +'<div class="cl-st"><div class="cl-sv">'+(c.visitas||0)+'</div><div class="cl-sl">Visitas</div></div>'
       +'<div class="cl-st"><div class="cl-sv" style="font-size:12px">'+fmt(c.totalGastado||0)+'</div><div class="cl-sl">Gastado</div></div>'
       +'<div class="cl-st"><div class="cl-sv" style="font-size:10px">'+(c.fechaAlta||'—')+'</div><div class="cl-sl">Alta</div></div>'
-      +'</div>';
+      +'</div>'+barra;
     el.appendChild(div);
   });
 }
 function editarCliente(i){
   editIdx=i;
   const c=clientesDB[i]; if(!c)return;
+  _editCliId=c.id;
   $('mcl-nombre').value=c.nombre||'';
   $('mcl-tipo').value=c.tipo||'habitual';
   $('mcl-notas').value=c.notas||'';
@@ -1254,13 +1316,14 @@ function editarCliente(i){
   $('mo-cl').classList.add('op');
 }
 function saveEditCliente(){
-  const c=clientesDB[editIdx]; if(!c)return;
+  const c=clientesDB.find(x=>x.id===_editCliId); if(!c){ closeMo('mo-cl'); return; }
   const nm=($('mcl-nombre').value||'').trim();
   if(!nm){toast('El nombre no puede estar vacío','er');return;}
   c.nombre=nm;
   c.tipo=$('mcl-tipo').value;
   c.notas=($('mcl-notas').value||'').trim();
   c.tel=($('mcl-tel').value||'').replace(/\D/g,'');
+  c.modP=Date.now();
   saveCL();
   closeMo('mo-cl');
   renderBase($('cl-base-q')?$('cl-base-q').value:'');
@@ -1271,6 +1334,7 @@ function saveEditCliente(){
 function eliminarCliente(i){
   const c=clientesDB[i]; if(!c)return;
   if(!window.confirm('¿Eliminar a '+c.nombre+'?\n\nEsta acción no se puede deshacer.'))return;
+  markDel('clientes', c.id);
   clientesDB.splice(i,1);
   saveCL();
   renderBase($('cl-base-q')?$('cl-base-q').value:'');
@@ -1536,7 +1600,7 @@ function ejecutarCierreEvento(){
     const porProd={};
     p.consumos.forEach(c=>{porProd[c.prod]=(porProd[c.prod]||0)+c.cant;});
     const fav=Object.entries(porProd).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—';
-    eventosHist.push({nombre:p.nombre,evento:nombreEvento,fecha,anio,total:totalP,consumos:[...p.consumos],favProd:fav});
+    eventosHist.push({id:'ev_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),nombre:p.nombre,evento:nombreEvento,fecha,anio,total:totalP,consumos:[...p.consumos],favProd:fav});
     // Actualizar clientesDB
     const cl=clientesDB.find(c=>c.nombre.toLowerCase()===p.nombre.toLowerCase());
     if(cl){
@@ -1586,7 +1650,7 @@ function renderAdm(){
   });
 }
 function openEditProd(i){
-  editIdx=i; const p=prods[i];
+  editIdx=i; const p=prods[i]; _editProdId=p.id;
   $('mo-prod-tit').textContent='Editar — '+p.nombre;
   $('mnm').value=p.nombre; $('mic').value=p.icon; $('mpr').value=p.precio; $('mco').value=p.costo||0;
   $('mo-prod').classList.add('op');
@@ -1595,18 +1659,21 @@ function saveEditProd(){
   const nm=$('mnm').value.trim(), ic=$('mic').value.trim()||'🍺';
   const pr=parseInt($('mpr').value)||0, co=parseInt($('mco').value)||0;
   if(!nm||!pr){toast('Completá nombre y precio','er');return;}
-  prods[editIdx]={...prods[editIdx],nombre:nm,icon:ic,precio:pr,costo:co};
+  const ix = prods.findIndex(x=>x.id===_editProdId);
+  if(ix<0){ closeMo('mo-prod'); toast('Ese producto ya no existe','er'); return; }
+  prods[ix]={...prods[ix],nombre:nm,icon:ic,precio:pr,costo:co,mod:Date.now()};
   saveP(); renderAdm(); renderPG(); renderEvPGrid(); closeMo('mo-prod'); toast('✓ '+nm+' actualizado');
 }
 function delProd(i){
   if(!confirm('¿Quitar "'+prods[i].nombre+'"?')) return;
+  markDel('prods', prods[i].id);
   prods.splice(i,1); saveP(); renderAdm(); renderPG(); renderEvPGrid();
 }
 function addProd(){
   const nm=($('npnm').value||'').trim(), ic=($('npic').value||'').trim()||'🔹';
   const pr=parseInt($('nppr').value)||0, co=parseInt($('npco').value)||0;
   if(!nm||!pr){toast('Completá nombre y precio','er');return;}
-  prods.push({id:nm.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now(),nombre:nm,icon:ic,precio:pr,costo:co});
+  prods.push({id:nm.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now(),nombre:nm,icon:ic,precio:pr,costo:co,mod:Date.now()});
   saveP(); renderAdm(); renderPG(); renderEvPGrid();
   $('npnm').value=''; $('npic').value=''; $('nppr').value=''; $('npco').value='';
   toast('✓ '+nm+' agregado');
@@ -1634,11 +1701,12 @@ function saveEditRank(){
   let cl = clientesDB.find(c=>c.nombre.toLowerCase()===_rankEditNombre.toLowerCase());
   if(!cl){
     // Crear entrada si no existe
-    cl = {id:nextID(),nombre:_rankEditNombre,tipo:'habitual',notas:'',fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[]};
+    cl = {id:nextID(),nombre:_rankEditNombre,tipo:'habitual',notas:'',fechaAlta:hoy(),visitas:0,totalGastado:0,historial:[],modP:Date.now()};
     clientesDB.push(cl);
   }
   cl.visitas = visitas;
   cl.totalGastado = total;
+  cl.corrS = Date.now();            // corrección manual: se propaga aunque baje el total
   saveCL();
   closeMo('mo-rank-edit');
   // Refrescar ranking con el mismo orden
@@ -1759,114 +1827,203 @@ async function testFbConexion(){
   }
 }
 
-async function fbPush(){
+// ── SINCRONIZACIÓN ─────────────────────────────────────────
+// Reglas: ventas/eventos/remitos se UNEN; productos y perfil de clientes ganan por "último cambio";
+// lo borrado viaja como lápida; los contadores de clientes toman el mayor consumo o la corrección manual más nueva.
+const tkey = k => String(k).replace(/[.$#\[\]\/]/g,'_');            // Firebase no admite . $ # [ ] / en las claves
+function markDel(kind, key){ tomb[kind][tkey(key)] = Date.now(); saveTomb(); }
+const _borrado = (kind, key, mod) => { const t = tomb[kind][tkey(key)]; return t!==undefined && t >= (mod||0); };
+
+function mergeRemote(data){
+  let changed = false, needPush = false;
+
+  // 0) Borrados: se unen (gana el más reciente)
+  const rt = data.emj_tomb || {};
+  ['ventas','clientes','prods'].forEach(kind=>{
+    const r = rt[kind] || {};
+    let ct = false;
+    Object.keys(r).forEach(k=>{ if((r[k]||0) > (tomb[kind][k]||0)){ tomb[kind][k] = r[k]; ct = true; } });
+    if(ct){ changed = true; saveTomb(); }
+    if(Object.keys(tomb[kind]).some(k=>(tomb[kind][k]||0) > (r[k]||0))) needPush = true;
+  });
+
+  // 1) Ventas
+  const rv = (data.emj_ventas && typeof data.emj_ventas==='object') ? data.emj_ventas : {};
+  let cv = false;
+  Object.keys(cache).forEach(f=>{
+    const antes = cache[f].length;
+    cache[f] = cache[f].filter(v=>!(v.timestamp && _borrado('ventas', v.timestamp, v.mod)));
+    if(cache[f].length !== antes) cv = true;
+    if(!cache[f].length) delete cache[f];
+  });
+  const idx = new Map();
+  Object.keys(cache).forEach(f=>cache[f].forEach(v=>{ if(v.timestamp) idx.set(v.timestamp, v); }));
+  const remTs = new Set();
+  Object.keys(rv).forEach(f=>{
+    const lista = Array.isArray(rv[f]) ? rv[f] : Object.values(rv[f]||{});
+    lista.forEach(r=>{
+      if(!r || !r.timestamp) return;
+      remTs.add(r.timestamp);
+      if(_borrado('ventas', r.timestamp, r.mod)) return;
+      const l = idx.get(r.timestamp);
+      if(!l){ (cache[f] = cache[f]||[]).push(r); idx.set(r.timestamp, r); cv = true; }
+      else if((r.mod||0) > (l.mod||0)){ Object.assign(l, r); cv = true; }
+      else if((l.mod||0) > (r.mod||0)) needPush = true;
+    });
+  });
+  idx.forEach((v,ts)=>{ if(!remTs.has(ts)) needPush = true; });
+  if(cv){ saveV(); changed = true; }
+
+  // 2) Productos
+  const rp = Array.isArray(data.emj_prods) ? data.emj_prods.filter(x=>x && x.id) : [];
+  let cp = false;
+  if(localStorage.getItem(KP)===null && rp.length){        // dispositivo nuevo: todavía usa los productos por defecto
+    prods = rp.filter(x=>!_borrado('prods', x.id, x.mod)); cp = true;
+  } else {
+    const antes = prods.length;
+    prods = prods.filter(x=>!_borrado('prods', x.id, x.mod));
+    if(prods.length !== antes) cp = true;
+    const pm = new Map(prods.map(x=>[x.id,x]));
+    rp.forEach(r=>{
+      if(_borrado('prods', r.id, r.mod)) return;
+      const l = pm.get(r.id);
+      if(!l){ prods.push(r); pm.set(r.id, r); cp = true; }
+      else if((r.mod||0) > (l.mod||0)){ Object.keys(r).forEach(k=>{ l[k] = r[k]; }); cp = true; }
+      else if((l.mod||0) > (r.mod||0)) needPush = true;
+    });
+    const rids = new Set(rp.map(x=>x.id));
+    if(prods.some(x=>!rids.has(x.id))) needPush = true;
+  }
+  if(cp){ savePLocal(); changed = true; }
+
+  // 3) Clientes
+  const rc = Array.isArray(data.emj_clientes_db) ? data.emj_clientes_db.filter(x=>x && x.id) : [];
+  let cc = false;
+  { const antes = clientesDB.length;
+    clientesDB = clientesDB.filter(c=>!_borrado('clientes', c.id, c.modP));
+    if(clientesDB.length !== antes) cc = true; }
+  const cm = new Map(clientesDB.map(c=>[c.id,c]));
+  rc.forEach(fc=>{
+    if(_borrado('clientes', fc.id, fc.modP)) return;
+    const lc = cm.get(fc.id);
+    if(!lc){ clientesDB.push(fc); cm.set(fc.id, fc); cc = true; return; }
+    const fm = fc.modP||0, lm = lc.modP||0;
+    if(fm > lm){
+      ['nombre','tipo','notas','tel','doc','dom'].forEach(k=>{ if(fc[k]!==undefined && fc[k]!==lc[k]) lc[k] = fc[k]; });
+      lc.modP = fm; cc = true;
+    } else if(lm > fm){ needPush = true; }
+    else {                                                   // misma fecha (o datos viejos sin fecha): se completan los vacíos
+      ['tel','doc','dom','notas'].forEach(k=>{
+        if(!lc[k] && fc[k]){ lc[k] = fc[k]; cc = true; }
+        else if(lc[k] && !fc[k]) needPush = true;
+      });
+    }
+    const fcor = fc.corrS||0, lcor = lc.corrS||0;
+    if(fcor > lcor || (fcor===lcor && (fc.totalGastado||0) > (lc.totalGastado||0))){
+      lc.totalGastado = fc.totalGastado||0; lc.visitas = fc.visitas||0;
+      if(Array.isArray(fc.historial)) lc.historial = fc.historial;
+      if(fcor) lc.corrS = fcor;
+      cc = true;
+    } else if(lcor > fcor || (lc.totalGastado||0) > (fc.totalGastado||0)) needPush = true;
+  });
+  { const ids = new Set(rc.map(c=>c.id)); if(clientesDB.some(c=>!ids.has(c.id))) needPush = true; }
+  if(cc){ saveCLLocal(); changed = true; }
+
+  // 4) Eventos cerrados (se unen)
+  const rev = Array.isArray(data.emj_eventos_hist) ? data.emj_eventos_hist.filter(Boolean) : [];
+  const evk = e => e.id || [e.evento,e.nombre,e.fecha,e.total].join('|');
+  const ek = new Set(eventosHist.map(evk));
+  let ce = false;
+  rev.forEach(e=>{ if(!ek.has(evk(e))){ eventosHist.push(e); ek.add(evk(e)); ce = true; } });
+  { const rk = new Set(rev.map(evk)); if(eventosHist.some(e=>!rk.has(evk(e)))) needPush = true; }
+  if(ce){ saveELocal(); changed = true; }
+
+  // 5) Remitos
+  const rr = Array.isArray(data.emj_remitos) ? data.emj_remitos.filter(x=>x && x.id) : [];
+  let cr = false;
+  const rm = new Map(remitos.map(r=>[r.id,r]));
+  rr.forEach(x=>{
+    const l = rm.get(x.id);
+    if(!l){ remitos.push(x); rm.set(x.id, x); cr = true; }
+    else if((x.mod||0) > (l.mod||0)){ Object.assign(l, x); cr = true; }
+    else if((l.mod||0) > (x.mod||0)) needPush = true;
+  });
+  { const ids = new Set(rr.map(x=>x.id)); if(remitos.some(r=>!ids.has(r.id))) needPush = true; }
+  if(cr){ saveRLocal(); changed = true; }
+
+  return { changed, needPush };
+}
+
+// Trae lo remoto y lo mezcla con lo local (no sube nada)
+async function fbMerge(){
+  const auth = fbKey ? `?auth=${fbKey}` : '';
+  const r = await fetch(`${fbUrl}/emj_data.json${auth}`);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const data = await r.json();
+  if(!data) return { changed:false, needPush:true };        // Firebase vacío: hay que subir lo local
+  return mergeRemote(data);
+}
+
+// Vuelve a dibujar lo que se ve en pantalla después de recibir cambios
+function refrescarVistas(){
+  try{
+    renderPG(); renderGG(); renderAdm(); renderSugerencias(); renderRemitos(); cargarDia();
+    if(sel){                                                 // el producto elegido puede haber cambiado de precio o haberse borrado
+      const np = prods.find(x=>x.id===sel.id); sel = np || null;
+      if(!sel){ const b=$('btn-add-cart'); if(b) b.disabled = true; const pv=$('prod-sel-preview'); if(pv) pv.innerHTML=''; }
+      else { const b = document.querySelector('.pb[data-id="'+sel.id+'"]'); if(b) b.classList.add('sel'); }
+    }
+    const act = document.querySelector('.pg.active'); const id = act ? act.id.replace('tab-','') : '';
+    if(id==='hist') renderH30();
+    if(id==='crm') renderBase($('cl-base-q') ? $('cl-base-q').value : '');
+    if(id==='ranking'){ const sl = $('rank-ord-sel'); renderRanking(sl ? sl.value : 'total'); }
+    if(id==='dashboard') renderDash();
+    if(id==='eventos'){ renderEvPGrid(); }
+  }catch(e){ console.error('refrescarVistas', e); }
+}
+
+async function fbPush(premerge=true){
   if(!fbUrl) return;
   const auth = fbKey ? `?auth=${fbKey}` : '';
-  const data = {
-    emj_ventas: cache,
-    emj_clientes_db: clientesDB,
-    emj_eventos_hist: eventosHist,
-    emj_prods: prods,
-    emj_remitos: remitos,
-    last_update: Date.now(),
-    device: navigator.userAgent.substring(0,40),
-  };
+  const banner = document.getElementById('sync-banner');
   try {
-    const banner = document.getElementById('sync-banner');
     if(banner) banner.classList.add('show');
     syncDot('syn');
-    await fetch(`${fbUrl}/emj_data.json${auth}`, {
+    if(premerge){                                            // antes de subir, se incorpora lo que hicieron los demás
+      try{ const m = await fbMerge(); if(m.changed) refrescarVistas(); }catch(e){ /* sin conexión: se intenta igual */ }
+    }
+    const data = {
+      emj_ventas: cache,
+      emj_clientes_db: clientesDB,
+      emj_eventos_hist: eventosHist,
+      emj_prods: prods,
+      emj_remitos: remitos,
+      emj_tomb: tomb,
+      last_update: Date.now(),
+      device: navigator.userAgent.substring(0,40),
+    };
+    const r = await fetch(`${fbUrl}/emj_data.json${auth}`, {
       method:'PUT',
       body: JSON.stringify(data),
       headers:{'Content-Type':'application/json'}
     });
+    if(!r.ok) throw new Error('HTTP '+r.status);
     syncDot('ok');
     if(banner) setTimeout(()=>banner.classList.remove('show'), 800);
   } catch(e){
     syncDot('err');
-    const banner = document.getElementById('sync-banner');
     if(banner) banner.classList.remove('show');
   }
 }
 
 async function fbPull(){
   if(!fbUrl) return false;
-  const auth = fbKey ? `?auth=${fbKey}` : '';
   try {
-    const r = await fetch(`${fbUrl}/emj_data.json${auth}`);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data = await r.json();
-    if(!data) { syncDot('local'); return false; }
-
-    let changed = false;
-
-    // MERGE ventas — agregar las que vienen de Firebase y no están en local
-    if(data.emj_ventas && typeof data.emj_ventas === 'object'){
-      Object.keys(data.emj_ventas).forEach(fecha=>{
-        const remotas = data.emj_ventas[fecha] || [];
-        const locales = cache[fecha] || [];
-        const tsLocales = new Set(locales.map(v=>v.timestamp));
-        const nuevas = remotas.filter(v=>v.timestamp && !tsLocales.has(v.timestamp));
-        if(nuevas.length){
-          cache[fecha] = [...locales, ...nuevas];
-          changed = true;
-        }
-        // También agregar fechas que no existen en local
-        if(!cache[fecha] && remotas.length){
-          cache[fecha] = remotas;
-          changed = true;
-        }
-      });
-      if(changed) saveV();
-    }
-
-    // Clientes — merge por ID
-    if(data.emj_clientes_db && Array.isArray(data.emj_clientes_db) && data.emj_clientes_db.length){
-      const idsLocales = new Set(clientesDB.map(c=>c.id));
-      const nuevos = data.emj_clientes_db.filter(c=>!idsLocales.has(c.id));
-      if(nuevos.length){ clientesDB = [...clientesDB, ...nuevos]; saveCL(); changed = true; }
-      // Actualizar visitas y totalGastado si Firebase tiene más
-      data.emj_clientes_db.forEach(fc=>{
-        const lc = clientesDB.find(c=>c.id===fc.id);
-        if(lc && fc.totalGastado > (lc.totalGastado||0)){
-          lc.totalGastado = fc.totalGastado;
-          lc.visitas = fc.visitas;
-          changed = true;
-        }
-      });
-      if(changed) saveCL();
-    }
-
-    // Eventos — merge
-    if(data.emj_eventos_hist && Array.isArray(data.emj_eventos_hist) && data.emj_eventos_hist.length){
-      if(!eventosHist.length){ eventosHist = data.emj_eventos_hist; saveE(); changed = true; }
-    }
-
-    // Productos — solo si local está vacío
-    if(data.emj_prods && Array.isArray(data.emj_prods) && !prods.length){
-      prods = data.emj_prods; saveP(); changed = true;
-    }
-
-    // Remitos — merge por id; gana el registro con 'mod' más reciente (cobrado/anulado no se pisan)
-    if(Array.isArray(data.emj_remitos)){
-      let cambioR = false;
-      data.emj_remitos.forEach(rr=>{
-        if(!rr || !rr.id) return;
-        const lr = remitos.find(x=>x.id===rr.id);
-        if(!lr){ remitos.push(rr); cambioR = true; }
-        else if((rr.mod||0) > (lr.mod||0)){ Object.assign(lr, rr); cambioR = true; }
-      });
-      if(cambioR){ saveRLocal(); changed = true; }
-    }
-
-    if(changed){
-      renderPG(); renderGG(); renderAdm();
-      cargarDia(); renderSugerencias();
-      renderRemitos();
-    }
-
+    const m = await fbMerge();
+    if(m.changed) refrescarVistas();
     syncDot('ok');
-    return changed;
+    if(m.needPush) await fbPush(false);                      // lo local que falta arriba (o quedó viejo) se repone solo
+    return m.changed;
   } catch(e){
     syncDot('err');
     return false;
@@ -2095,6 +2252,7 @@ function exportRemito(modo){
     if((doc && doc!==cl.doc) || (dom && dom!==cl.dom)){
       if(doc) cl.doc = doc;
       if(dom) cl.dom = dom;
+      cl.modP = Date.now();
       saveCL();
     }
   }
@@ -2155,7 +2313,7 @@ async function guardarRemitoPend(){
     remitos.push(rec);
     // recordar CUIT/domicilio en la ficha (sin disparar otro push)
     const cl = clientesDB.find(c=>(c.nombre||'').toLowerCase()===nombre.toLowerCase());
-    if(cl){ if(rec.doc) cl.doc = rec.doc; if(rec.dom) cl.dom = rec.dom; localStorage.setItem(KCL, JSON.stringify(clientesDB)); }
+    if(cl){ if(rec.doc) cl.doc = rec.doc; if(rec.dom) cl.dom = rec.dom; cl.modP = Date.now(); localStorage.setItem(KCL, JSON.stringify(clientesDB)); }
     saveRLocal();
     // el carrito ya quedó en el remito: se limpia para no registrarlo dos veces
     limpiarCarrito(); clSelActual = null; selCliente(null); $('fnota').value = '';
@@ -2359,6 +2517,19 @@ async function confirmarAnular(){
   } finally { _procesando = false; }
 }
 
+let _unifTimer = null;
+async function usarMisPrecios(){
+  const b = $('btn-unif-precios'); const txt = '💲 Usar los precios de este dispositivo en todos';
+  if(!b.dataset.confirm){                                    // primera pulsación: pide confirmar
+    b.dataset.confirm = '1'; b.textContent = '⚠️ Tocá de nuevo para confirmar';
+    _unifTimer = setTimeout(()=>{ delete b.dataset.confirm; b.textContent = txt; }, 5000); return;
+  }
+  clearTimeout(_unifTimer); delete b.dataset.confirm; b.textContent = txt;
+  const ahora = Date.now(); prods.forEach(x=>{ x.mod = ahora; }); savePLocal();
+  await fbPush();
+  toast('✓ Precios unificados en todos los dispositivos');
+}
+
 // ── BACKUP / IMPORTAR ─────────────────────────────────────
 function exportarDatos(){
   const datos = {
@@ -2423,6 +2594,13 @@ function importarDatos(input){
       }
 
       if(!importados.length) throw new Error('El archivo no contiene datos reconocibles');
+      { const ahora = Date.now();                              // lo importado manda: ningún borrado anterior lo quita
+        Object.keys(cache).forEach(f=>cache[f].forEach(v=>{ if(v.timestamp) v.mod = ahora; }));
+        prods.forEach(x=>{ x.mod = ahora; });
+        clientesDB.forEach(c=>{ c.modP = ahora; });
+        remitos.forEach(r=>{ r.mod = ahora; });
+        tomb = {ventas:{},clientes:{},prods:{}}; saveTomb();
+        saveV(); savePLocal(); saveCLLocal(); saveRLocal(); }
 
       // Refrescar toda la UI
       renderPG(); renderGG(); renderAdm();
@@ -2872,6 +3050,7 @@ const fechaHoy=hoy();
 $('ffecha').value=fechaHoy;
 if(_evGuardado&&_evGuardado.nombre) $('ev-nombre').value=_evGuardado.nombre;
 renderPG(); renderGG(); renderCarrito(); cargarDia(); renderRemitos();
+try{ const _o=localStorage.getItem('emj_cl_orden'); if(_o && $('cl-base-orden')) $('cl-base-orden').value=_o; }catch(e){}
 const _rankMesSel=document.getElementById('rank-mes-sel');
 if(_rankMesSel){ const _hm=String(new Date().getMonth()+1).padStart(2,'0'); _rankMesSel.value=_hm; }
 sincronizar();
